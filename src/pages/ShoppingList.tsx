@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trash2, Share2, Filter, Calendar, Package, Search, Users, Download } from 'lucide-react';
+import { Plus, Trash2, Share2, Filter, Calendar, Package, Search, Users, Download, Euro, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { api, CATEGORIES } from '@/lib/cloudflare';
 
 interface ShoppingItem {
   id: string;
@@ -16,21 +17,19 @@ interface ShoppingItem {
   category: string;
   completed: boolean;
   priority: 'alta' | 'media' | 'bassa';
+  cost?: number;
+  purchased_by?: string;
 }
 
 const ShoppingList = () => {
-  const [items, setItems] = useState<ShoppingItem[]>([
-    { id: '1', name: 'Pomodori', quantity: '1 kg', category: 'Verdura', completed: false, priority: 'alta' },
-    { id: '2', name: 'Pasta', quantity: '500g', category: 'Cereali', completed: false, priority: 'media' },
-    { id: '3', name: 'Mozzarella', quantity: '250g', category: 'Latticini', completed: false, priority: 'alta' },
-    { id: '4', name: 'Basilico', quantity: '1 mazzo', category: 'Erbe', completed: false, priority: 'bassa' },
-  ]);
-
+  const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: '',
-    category: 'Verdura',
-    priority: 'media' as 'alta' | 'media' | 'bassa'
+    category: Object.values(CATEGORIES)[0][0],
+    priority: 'media' as 'alta' | 'media' | 'bassa',
+    cost: 0
   });
 
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null);
@@ -40,73 +39,155 @@ const ShoppingList = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const toggleItem = (id: string) => {
+  // Flatten all categories for the dropdown
+  const allCategories = Object.values(CATEGORIES).flat();
+
+  useEffect(() => {
+    loadShoppingItems();
+  }, []);
+
+  const loadShoppingItems = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getShoppingItems();
+      setItems(data);
+    } catch (error) {
+      console.error('Error loading shopping items:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare la lista della spesa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleItem = async (id: string) => {
     const item = items.find(item => item.id === id);
     if (item && !item.completed) {
       setSelectedItem(item);
     } else {
-      setItems(items.map(item => 
-        item.id === id ? { ...item, completed: !item.completed } : item
-      ));
+      try {
+        const updatedItem = await api.updateShoppingItem(id, { 
+          completed: !item?.completed,
+          purchased_by: !item?.completed ? 'Te' : undefined
+        });
+        
+        setItems(items.map(item => 
+          item.id === id ? { ...item, ...updatedItem } : item
+        ));
+
+        toast({
+          title: item?.completed ? "Elemento rimosso" : "Elemento completato",
+          description: `${item?.name} ${item?.completed ? 'rimosso dalla' : 'aggiunto alla'} lista completati`,
+        });
+      } catch (error) {
+        console.error('Error updating item:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile aggiornare l'elemento",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const moveItemToPantry = () => {
+  const moveItemToPantry = async () => {
     if (selectedItem && expiryDate) {
-      console.log('Moving to pantry:', selectedItem, 'Expires:', expiryDate);
-      
-      setItems(items.filter(item => item.id !== selectedItem.id));
-      
-      toast({
-        title: "Prodotto aggiunto alle conserve",
-        description: `${selectedItem.name} è stato spostato nella dispensa`,
-      });
-      
-      setSelectedItem(null);
-      setExpiryDate('');
+      try {
+        await api.createPantryItem({
+          name: selectedItem.name,
+          quantity: parseInt(selectedItem.quantity) || 1,
+          unit: 'pezzi',
+          category: selectedItem.category,
+          expiry_date: expiryDate,
+          status: 'normale'
+        });
+
+        await api.deleteShoppingItem(selectedItem.id);
+        
+        setItems(items.filter(item => item.id !== selectedItem.id));
+        
+        toast({
+          title: "Prodotto aggiunto alle conserve",
+          description: `${selectedItem.name} è stato spostato nella dispensa`,
+        });
+        
+        setSelectedItem(null);
+        setExpiryDate('');
+      } catch (error) {
+        console.error('Error moving item to pantry:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile spostare l'elemento nelle conserve",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const addItem = () => {
+  const addItem = async () => {
     if (newItem.name.trim()) {
-      const item: ShoppingItem = {
-        id: Date.now().toString(),
-        name: newItem.name,
-        quantity: newItem.quantity || '1',
-        category: newItem.category,
-        completed: false,
-        priority: newItem.priority
-      };
-      setItems([...items, item]);
-      setNewItem({
-        name: '',
-        quantity: '',
-        category: 'Verdura',
-        priority: 'media'
-      });
-      
-      toast({
-        title: "Prodotto aggiunto",
-        description: `${item.name} aggiunto alla lista`,
-      });
+      try {
+        const item = await api.createShoppingItem({
+          name: newItem.name,
+          quantity: newItem.quantity || '1',
+          category: newItem.category,
+          completed: false,
+          priority: newItem.priority,
+          cost: newItem.cost > 0 ? newItem.cost : undefined
+        });
+        
+        setItems([...items, item]);
+        setNewItem({
+          name: '',
+          quantity: '',
+          category: Object.values(CATEGORIES)[0][0],
+          priority: 'media',
+          cost: 0
+        });
+        
+        toast({
+          title: "Prodotto aggiunto",
+          description: `${item.name} aggiunto alla lista`,
+        });
+      } catch (error) {
+        console.error('Error adding item:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile aggiungere l'elemento",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const removeItem = (id: string) => {
-    const item = items.find(i => i.id === id);
-    setItems(items.filter(item => item.id !== id));
-    
-    if (item) {
+  const removeItem = async (id: string) => {
+    try {
+      const item = items.find(i => i.id === id);
+      await api.deleteShoppingItem(id);
+      setItems(items.filter(item => item.id !== id));
+      
+      if (item) {
+        toast({
+          title: "Prodotto rimosso",
+          description: `${item.name} rimosso dalla lista`,
+        });
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
       toast({
-        title: "Prodotto rimosso",
-        description: `${item.name} rimosso dalla lista`,
+        title: "Errore",
+        description: "Impossibile rimuovere l'elemento",
+        variant: "destructive"
       });
     }
   };
 
   const shareList = () => {
     if (shareEmail.trim()) {
-      // Simulazione condivisione
+      // Simulazione condivisione - In produzione usare API reale
       toast({
         title: "Lista condivisa!",
         description: `Lista condivisa con ${shareEmail}`,
@@ -117,15 +198,21 @@ const ShoppingList = () => {
   };
 
   const exportList = () => {
-    const listText = items.map(item => 
-      `${item.completed ? '✓' : '○'} ${item.name} - ${item.quantity} (${item.category})`
-    ).join('\n');
+    const totalCost = items.reduce((sum, item) => sum + (item.cost || 0), 0);
+    const listText = [
+      `LISTA DELLA SPESA - ${new Date().toLocaleDateString('it-IT')}`,
+      `TOTALE STIMATO: €${totalCost.toFixed(2)}`,
+      '',
+      ...items.map(item => 
+        `${item.completed ? '✅' : '⭕'} ${item.name} - ${item.quantity} (${item.category})${item.cost ? ` - €${item.cost.toFixed(2)}` : ''}${item.purchased_by ? ` - Comprato da: ${item.purchased_by}` : ''}`
+      )
+    ].join('\n');
     
     const blob = new Blob([listText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'lista-spesa.txt';
+    a.download = `lista-spesa-${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     
     toast({
@@ -151,7 +238,18 @@ const ShoppingList = () => {
 
   const completedItems = items.filter(item => item.completed).length;
   const totalItems = items.length;
-  const categories = ['Verdura', 'Frutta', 'Carne', 'Pesce', 'Latticini', 'Cereali', 'Bevande', 'Dolci', 'Altro'];
+  const totalCost = items.reduce((sum, item) => sum + (item.cost || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-6 bg-gradient-to-br from-red-50 via-orange-50 to-green-50 min-h-screen">
+        <div className="bg-white rounded-2xl p-8 shadow-xl animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-6 bg-gradient-to-br from-red-50 via-orange-50 to-green-50 min-h-screen">
@@ -165,6 +263,12 @@ const ShoppingList = () => {
             <p className="text-muted-foreground mt-2 text-lg">
               {completedItems}/{totalItems} articoli completati
             </p>
+            <div className="flex items-center gap-3 mt-3">
+              <Badge className="bg-primary/10 text-primary">
+                <Euro className="h-3 w-3 mr-1" />
+                Totale: €{totalCost.toFixed(2)}
+              </Badge>
+            </div>
           </div>
           
           <div className="flex gap-3">
@@ -226,7 +330,7 @@ const ShoppingList = () => {
             onChange={(e) => setFilterCategory(e.target.value)}
           >
             <option value="">Tutte le categorie</option>
-            {categories.map(cat => (
+            {allCategories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
@@ -260,7 +364,7 @@ const ShoppingList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <Input
               placeholder="Nome prodotto..."
               value={newItem.name}
@@ -272,12 +376,19 @@ const ShoppingList = () => {
               value={newItem.quantity}
               onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
             />
+            <Input
+              type="number"
+              placeholder="Costo €"
+              value={newItem.cost || ''}
+              onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
+              step="0.01"
+            />
             <select
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={newItem.category}
               onChange={(e) => setNewItem({...newItem, category: e.target.value})}
             >
-              {categories.map(cat => (
+              {allCategories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -324,6 +435,12 @@ const ShoppingList = () => {
                       {item.name}
                     </h3>
                     <div className={`w-3 h-3 rounded-full ${getPriorityColor(item.priority)} animate-pulse`} />
+                    {item.cost && (
+                      <Badge variant="outline" className="border-green-500 text-green-700 bg-green-50">
+                        <Euro className="h-3 w-3 mr-1" />
+                        {item.cost.toFixed(2)}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="text-muted-foreground font-medium">{item.quantity}</p>
@@ -340,6 +457,12 @@ const ShoppingList = () => {
                     >
                       {item.priority.toUpperCase()}
                     </Badge>
+                    {item.purchased_by && (
+                      <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
+                        <User className="h-3 w-3 mr-1" />
+                        {item.purchased_by}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <Button
