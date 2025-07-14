@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Settings, User, Bell, Shield, Palette, Database, LogOut, Camera, Save, Download, Trash2, Key } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { auth, api } from '@/lib/cloudflare';
+import { firebaseAuth, firebaseApi } from '@/lib/firebase';
 import AuthForm from '@/components/AuthForm';
 
 const SettingsPage = () => {
@@ -39,7 +39,7 @@ const SettingsPage = () => {
   });
 
   useEffect(() => {
-    const currentUser = auth.getCurrentUser();
+    const currentUser = firebaseAuth.getCurrentUser();
     if (currentUser) {
       setIsAuthenticated(true);
       setUser(currentUser);
@@ -76,7 +76,7 @@ const SettingsPage = () => {
   const saveProfile = async () => {
     setIsLoading(true);
     try {
-      await api.updateProfile(profile);
+      await firebaseApi.updateProfile(profile);
       toast({
         title: "Profilo aggiornato",
         description: "Le modifiche sono state salvate con successo",
@@ -104,7 +104,7 @@ const SettingsPage = () => {
 
     setIsLoading(true);
     try {
-      await api.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      await firebaseApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
       toast({
         title: "Password cambiata",
         description: "La password è stata aggiornata con successo",
@@ -125,7 +125,7 @@ const SettingsPage = () => {
   const exportData = async () => {
     setIsLoading(true);
     try {
-      const data = await api.exportData();
+      const data = await firebaseApi.exportData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -151,13 +151,13 @@ const SettingsPage = () => {
   const deleteAllData = async () => {
     setIsLoading(true);
     try {
-      await api.deleteAllData();
+      await firebaseApi.deleteAllData();
       toast({
         title: "Dati eliminati",
         description: "Tutti i tuoi dati sono stati eliminati",
       });
       setShowDeleteDialog(false);
-      auth.logout();
+      firebaseAuth.logout();
     } catch (error) {
       toast({
         title: "Errore",
@@ -453,7 +453,7 @@ const SettingsPage = () => {
       {/* Logout */}
       <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardContent className="p-6">
-          <Button variant="destructive" className="w-full" size="lg" onClick={auth.logout}>
+          <Button variant="destructive" className="w-full" size="lg" onClick={firebaseAuth.logout}>
             <LogOut className="h-4 w-4 mr-2" />
             Esci dall'Account
           </Button>

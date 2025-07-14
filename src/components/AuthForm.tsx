@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { auth } from '@/lib/cloudflare';
+import { firebaseAuth } from '@/lib/firebase';
 
 interface AuthFormProps {
   onAuthSuccess: (user: any) => void;
@@ -29,7 +29,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const result = await auth.login(loginForm.email, loginForm.password);
+      const result = await firebaseAuth.login(loginForm.email, loginForm.password);
       toast({
         title: "Accesso effettuato!",
         description: "Benvenuto nell'app",
@@ -61,7 +61,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const result = await auth.register(
+      const result = await firebaseAuth.register(
         registerForm.email, 
         registerForm.password, 
         registerForm.name
