@@ -1,9 +1,9 @@
 
 // Cloudflare configuration and API handlers
 const CLOUDFLARE_CONFIG = {
-  accountId: process.env.REACT_APP_CLOUDFLARE_ACCOUNT_ID || '',
-  apiToken: process.env.REACT_APP_CLOUDFLARE_API_TOKEN || '',
-  databaseId: process.env.REACT_APP_CLOUDFLARE_D1_DATABASE_ID || '',
+  accountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
+  apiToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
+  databaseId: import.meta.env.VITE_CLOUDFLARE_D1_DATABASE_ID || '',
   baseUrl: 'https://api.cloudflare.com/client/v4'
 };
 
@@ -11,6 +11,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   created_at: string;
 }
 
