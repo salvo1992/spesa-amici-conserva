@@ -14,9 +14,6 @@ import Reviews from "./pages/Reviews";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-// Importiamo le API mock per lo sviluppo
-import "./lib/mockApi";
-
 const queryClient = new QueryClient();
 
 const App = () => (

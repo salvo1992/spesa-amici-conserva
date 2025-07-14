@@ -1,303 +1,228 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Package, AlertTriangle, CheckCircle, Plus, Search, Minus, ShoppingCart, Trash2, Loader } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Package, Plus, AlertTriangle, CheckCircle, Clock, Edit, Trash2, Filter } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { api, CATEGORIES } from '@/lib/cloudflare';
-
-interface PantryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  category: string;
-  expiry_date: string;
-  status: 'abbondante' | 'normale' | 'scarso' | 'scaduto';
-}
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { firebaseAuth, firebaseApi, CATEGORIES, type PantryItem } from '@/lib/firebase';
+import AuthForm from '@/components/AuthForm';
 
 const Pantry = () => {
-  const [items, setItems] = useState<PantryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tutti');
+  const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuth.isAuthenticated());
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: 0,
-    unit: 'pezzi',
-    category: 'Alimentari',
-    expiry_date: ''
+    unit: '',
+    category: '',
+    expiry_date: '',
+    status: 'normale' as 'abbondante' | 'normale' | 'scarso' | 'scaduto'
   });
 
-  const allCategories = ['Tutti', ...CATEGORIES.food, ...CATEGORIES.home, ...CATEGORIES.garden, ...CATEGORIES.car, ...CATEGORIES.personal, ...CATEGORIES.tech, ...CATEGORIES.other];
-  const units = ['pezzi', 'kg', 'litri', 'grammi', 'barattoli', 'scatole', 'pacchetti', 'bottiglie', 'confezioni'];
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadPantryItems();
-  }, []);
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['pantry-items'],
+    queryFn: firebaseApi.getPantryItems,
+    enabled: isAuthenticated
+  });
 
-  const loadPantryItems = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getPantryItems();
-      setItems(data);
-    } catch (error) {
-      console.error('Error loading pantry items:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare le conserve",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+  const createMutation = useMutation({
+    mutationFn: firebaseApi.createPantryItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pantry-items'] });
+      setShowAddDialog(false);
+      setNewItem({ name: '', quantity: 0, unit: '', category: '', expiry_date: '', status: 'normale' });
+      toast({ title: "Prodotto aggiunto", description: "Il prodotto è stato aggiunto alla dispensa" });
     }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PantryItem> }) => 
+      firebaseApi.updatePantryItem(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pantry-items'] });
+      toast({ title: "Prodotto aggiornato", description: "Le modifiche sono state salvate" });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: firebaseApi.deletePantryItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pantry-items'] });
+      toast({ title: "Prodotto eliminato", description: "Il prodotto è stato rimosso dalla dispensa" });
+    }
+  });
+
+  const handleAuthSuccess = (userData: any) => {
+    setIsAuthenticated(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'abbondante': return 'bg-green-500';
-      case 'normale': return 'bg-blue-500';
-      case 'scarso': return 'bg-yellow-500';
-      case 'scaduto': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+  if (!isAuthenticated) {
+    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+  }
+
+  const addItem = () => {
+    if (!newItem.name.trim()) return;
+    
+    createMutation.mutate({
+      name: newItem.name,
+      quantity: newItem.quantity,
+      unit: newItem.unit,
+      category: newItem.category || 'Altro',
+      expiry_date: newItem.expiry_date,
+      status: newItem.status
+    });
+  };
+
+  const deleteItem = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'abbondante': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'normale': return <Package className="h-4 w-4 text-blue-600" />;
-      case 'scarso': return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+      case 'scarso': return <AlertTriangle className="h-4 w-4 text-orange-600" />;
       case 'scaduto': return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      default: return <Package className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4 text-blue-600" />;
     }
   };
 
-  const getProgressValue = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'abbondante': return 100;
-      case 'normale': return 60;
-      case 'scarso': return 30;
-      case 'scaduto': return 0;
-      default: return 50;
+      case 'abbondante': return 'bg-green-100 text-green-800';
+      case 'scarso': return 'bg-orange-100 text-orange-800';
+      case 'scaduto': return 'bg-red-100 text-red-800';
+      default: return 'bg-blue-100 text-blue-800';
     }
-  };
-
-  const calculateStatus = (quantity: number, expiryDate: string): 'abbondante' | 'normale' | 'scarso' | 'scaduto' => {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilExpiry < 0) return 'scaduto';
-    if (quantity === 0) return 'scaduto';
-    if (quantity <= 1 || daysUntilExpiry <= 3) return 'scarso';
-    if (quantity <= 3 || daysUntilExpiry <= 7) return 'normale';
-    return 'abbondante';
   };
 
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'Tutti' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const categoryMatch = filterCategory === 'all' || item.category === filterCategory;
+    const statusMatch = filterStatus === 'all' || item.status === filterStatus;
+    return categoryMatch && statusMatch;
   });
 
-  const updateQuantity = async (id: string, newQuantity: number) => {
-    try {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
-
-      const updatedQuantity = Math.max(0, newQuantity);
-      const newStatus = calculateStatus(updatedQuantity, item.expiry_date);
-      
-      await api.updatePantryItem(id, { 
-        quantity: updatedQuantity, 
-        status: newStatus 
-      });
-      
-      setItems(items.map(item => 
-        item.id === id 
-          ? { ...item, quantity: updatedQuantity, status: newStatus }
-          : item
-      ));
-      
-      toast({
-        title: "Quantità aggiornata",
-        description: `${item.name} aggiornato con successo`,
-      });
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare la quantità",
-        variant: "destructive"
-      });
-    }
+  const isExpiringSoon = (expiryDate: string) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7 && diffDays >= 0;
   };
 
-  const addToShoppingList = async (item: PantryItem) => {
-    try {
-      await api.createShoppingItem({
-        name: item.name,
-        quantity: '1',
-        category: item.category,
-        completed: false,
-        priority: 'media'
-      });
-      
-      toast({
-        title: "Aggiunto alla lista spesa",
-        description: `${item.name} è stato aggiunto alla lista della spesa`,
-      });
-    } catch (error) {
-      console.error('Error adding to shopping list:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiungere alla lista spesa",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const removeItem = async (id: string) => {
-    try {
-      await api.deletePantryItem(id);
-      setItems(items.filter(item => item.id !== id));
-      toast({
-        title: "Prodotto eliminato",
-        description: "Il prodotto è stato rimosso dalle conserve",
-      });
-    } catch (error) {
-      console.error('Error removing item:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il prodotto",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const addNewItem = async () => {
-    if (newItem.name.trim() && newItem.quantity > 0 && newItem.expiry_date) {
-      try {
-        const status = calculateStatus(newItem.quantity, newItem.expiry_date);
-        
-        const createdItem = await api.createPantryItem({
-          name: newItem.name,
-          quantity: newItem.quantity,
-          unit: newItem.unit,
-          category: newItem.category,
-          expiry_date: newItem.expiry_date,
-          status
-        });
-        
-        setItems([createdItem, ...items]);
-        setNewItem({
-          name: '',
-          quantity: 0,
-          unit: 'pezzi',
-          category: 'Alimentari',
-          expiry_date: ''
-        });
-        setShowAddDialog(false);
-        
-        toast({
-          title: "Prodotto aggiunto",
-          description: `${createdItem.name} è stato aggiunto alle conserve`,
-        });
-      } catch (error) {
-        console.error('Error adding item:', error);
-        toast({
-          title: "Errore",
-          description: "Impossibile aggiungere il prodotto",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  const stats = {
-    totale: items.length,
-    abbondanti: items.filter(i => i.status === 'abbondante').length,
-    scarsi: items.filter(i => i.status === 'scarso').length,
-    scaduti: items.filter(i => i.status === 'scaduto').length,
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader className="h-8 w-8 animate-spin" />
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-green-50 to-blue-50 min-h-screen">
+    <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
       {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-primary">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Le Mie Conserve
-            </h1>
-            <p className="text-muted-foreground mt-1">Gestisci la tua dispensa</p>
+      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-600 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Package className="h-8 w-8 text-green-600" />
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent">
+                Dispensa
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {filteredItems.length} prodotti disponibili
+              </p>
+            </div>
           </div>
           
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white shadow-lg">
+              <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
                 <Plus className="h-4 w-4 mr-2" />
                 Aggiungi Prodotto
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Aggiungi Nuovo Prodotto</DialogTitle>
+                <DialogTitle>Nuovo Prodotto in Dispensa</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <Input
-                  placeholder="Nome prodotto"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                />
-                <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Nome Prodotto</Label>
                   <Input
-                    type="number"
-                    placeholder="Quantità"
-                    value={newItem.quantity || ''}
-                    onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 0})}
+                    value={newItem.name}
+                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                    placeholder="Es. Pasta, Riso, Olio..."
                   />
-                  <select
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={newItem.unit}
-                    onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
-                  >
-                    {units.map(unit => (
-                      <option key={unit} value={unit}>{unit}</option>
-                    ))}
-                  </select>
                 </div>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={newItem.category}
-                  onChange={(e) => setNewItem({...newItem, category: e.target.value})}
-                >
-                  {allCategories.filter(cat => cat !== 'Tutti').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <Input
-                  type="date"
-                  value={newItem.expiry_date}
-                  onChange={(e) => setNewItem({...newItem, expiry_date: e.target.value})}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-                <Button onClick={addNewItem} className="w-full">
-                  Aggiungi alle Conserve
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Quantità</Label>
+                    <Input
+                      type="number"
+                      value={newItem.quantity}
+                      onChange={(e) => setNewItem({...newItem, quantity: parseFloat(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div>
+                    <Label>Unità</Label>
+                    <Input
+                      value={newItem.unit}
+                      onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
+                      placeholder="kg, L, pezzi, confezioni..."
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Data di Scadenza</Label>
+                  <Input
+                    type="date"
+                    value={newItem.expiry_date}
+                    onChange={(e) => setNewItem({...newItem, expiry_date: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Categoria</Label>
+                    <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.food.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Stato</Label>
+                    <Select value={newItem.status} onValueChange={(value: 'abbondante' | 'normale' | 'scarso' | 'scaduto') => setNewItem({...newItem, status: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="abbondante">Abbondante</SelectItem>
+                        <SelectItem value="normale">Normale</SelectItem>
+                        <SelectItem value="scarso">Scarso</SelectItem>
+                        <SelectItem value="scaduto">Scaduto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button onClick={addItem} disabled={createMutation.isPending} className="w-full">
+                  {createMutation.isPending ? 'Aggiungendo...' : 'Aggiungi alla Dispensa'}
                 </Button>
               </div>
             </DialogContent>
@@ -305,148 +230,101 @@ const Pantry = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { title: 'Totale Articoli', value: stats.totale, color: 'text-foreground', bg: 'bg-white' },
-          { title: 'Abbondanti', value: stats.abbondanti, color: 'text-green-600', bg: 'bg-green-50' },
-          { title: 'Scarsi', value: stats.scarsi, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-          { title: 'Scaduti', value: stats.scaduti, color: 'text-red-600', bg: 'bg-red-50' }
-        ].map((stat, index) => (
-          <Card key={index} className={`${stat.bg} border-0 shadow-lg`}>
-            <CardContent className="p-4 text-center">
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.title}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Filters */}
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filtri:</span>
+            </div>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tutte le categorie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le categorie</SelectItem>
+                {CATEGORIES.food.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tutti gli stati" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="abbondante">Abbondante</SelectItem>
+                <SelectItem value="normale">Normale</SelectItem>
+                <SelectItem value="scarso">Scarso</SelectItem>
+                <SelectItem value="scaduto">Scaduto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Filtri */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Cerca nelle conserve..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white shadow-lg border-0"
-          />
-        </div>
-        <select
-          className="rounded-md border-0 shadow-lg bg-white px-3 py-2 text-sm"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          {allCategories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Items List */}
-      <div className="space-y-3">
+      {/* Pantry Items */}
+      <div className="grid gap-4">
         {filteredItems.map((item) => (
-          <Card key={item.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardContent className="p-6">
+          <Card 
+            key={item.id} 
+            className={`bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in transition-all duration-300 hover:shadow-xl ${
+              item.status === 'scaduto' ? 'border-l-4 border-red-500' :
+              isExpiringSoon(item.expiry_date) ? 'border-l-4 border-orange-500' : ''
+            }`}
+          >
+            <CardContent className="p-4">
               <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(item.status)}
+                </div>
+                
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    {getStatusIcon(item.status)}
-                    <h3 className="font-medium text-foreground">{item.name}</h3>
-                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                      {item.category}
-                    </Badge>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <Badge variant="secondary">{item.category}</Badge>
+                    <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+                    {isExpiringSoon(item.expiry_date) && (
+                      <Badge variant="destructive">In scadenza</Badge>
+                    )}
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">
-                          {item.quantity} {item.unit}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <span className="text-muted-foreground">
-                        Scade: {new Date(item.expiry_date).toLocaleDateString('it-IT')}
-                      </span>
-                    </div>
-                    
-                    <Progress 
-                      value={getProgressValue(item.status)} 
-                      className="h-2"
-                    />
-                    
-                    <div className="flex justify-between items-center">
-                      <span className={`text-xs font-medium ${
-                        item.status === 'scaduto' ? 'text-red-600' :
-                        item.status === 'scarso' ? 'text-yellow-600' :
-                        item.status === 'normale' ? 'text-blue-600' :
-                        'text-green-600'
-                      }`}>
-                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                      </span>
-                      
-                      <div className="flex gap-2">
-                        {(item.status === 'scarso' || item.quantity <= 1) && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => addToShoppingList(item)}
-                            className="hover:bg-accent/10"
-                          >
-                            <ShoppingCart className="h-4 w-4 mr-1" />
-                            Lista Spesa
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                    <span>Quantità: {item.quantity} {item.unit}</span>
+                    <span>Scadenza: {new Date(item.expiry_date).toLocaleDateString()}</span>
                   </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditingItem(item)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteItem(item.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
+        
+        {filteredItems.length === 0 && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nessun prodotto trovato</h3>
+              <p className="text-muted-foreground mb-4">
+                {items.length === 0 ? 'Inizia aggiungendo i tuoi primi prodotti alla dispensa!' : 'Prova a modificare i filtri di ricerca.'}
+              </p>
+              <Button onClick={() => setShowAddDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Aggiungi Prodotto
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {filteredItems.length === 0 && (
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-12 text-center">
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground text-lg">
-              {searchTerm || selectedCategory !== 'Tutti' ? 'Nessun prodotto trovato' : 'Nessuna conserva'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {searchTerm || selectedCategory !== 'Tutti' ? 'Prova a cambiare i filtri' : 'Inizia aggiungendo i tuoi prodotti!'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
