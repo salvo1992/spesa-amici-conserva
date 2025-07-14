@@ -1,14 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Settings, User, Bell, Shield, Palette, Database, LogOut, Camera } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Settings, User, Bell, Shield, Palette, Database, LogOut, Camera, Save, Download, Trash2, Key } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { auth, api } from '@/lib/cloudflare';
+import AuthForm from '@/components/AuthForm';
 
 const SettingsPage = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const [settings, setSettings] = useState({
     notifications: true,
     shareData: false,
@@ -18,23 +28,176 @@ const SettingsPage = () => {
   });
 
   const [profile, setProfile] = useState({
-    name: 'Mario Rossi',
-    email: 'mario.rossi@email.com',
-    phone: '+39 123 456 7890'
+    name: '',
+    email: '',
+    phone: ''
   });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    const currentUser = auth.getCurrentUser();
+    if (currentUser) {
+      setIsAuthenticated(true);
+      setUser(currentUser);
+      setProfile({
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        phone: currentUser.phone || ''
+      });
+    }
+  }, []);
+
+  const handleAuthSuccess = (userData: any) => {
+    setIsAuthenticated(true);
+    setUser(userData);
+    setProfile({
+      name: userData.name || '',
+      email: userData.email || '',
+      phone: userData.phone || ''
+    });
+  };
 
   const updateSetting = (key: string, value: boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+    toast({
+      title: "Impostazione aggiornata",
+      description: `${key} ${value ? 'attivato' : 'disattivato'}`,
+    });
   };
 
   const updateProfile = (key: string, value: string) => {
     setProfile(prev => ({ ...prev, [key]: value }));
   };
 
+  const saveProfile = async () => {
+    setIsLoading(true);
+    try {
+      await api.updateProfile(profile);
+      toast({
+        title: "Profilo aggiornato",
+        description: "Le modifiche sono state salvate con successo",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare le modifiche",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non coincidono",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      toast({
+        title: "Password cambiata",
+        description: "La password è stata aggiornata con successo",
+      });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordDialog(false);
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile cambiare la password",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const exportData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `food-manager-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      
+      toast({
+        title: "Dati esportati",
+        description: "I tuoi dati sono stati scaricati con successo",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile esportare i dati",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteAllData = async () => {
+    setIsLoading(true);
+    try {
+      await api.deleteAllData();
+      toast({
+        title: "Dati eliminati",
+        description: "Tutti i tuoi dati sono stati eliminati",
+      });
+      setShowDeleteDialog(false);
+      auth.logout();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare i dati",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createBackup = () => {
+    const backupData = {
+      profile,
+      settings,
+      timestamp: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    
+    toast({
+      title: "Backup creato",
+      description: "Backup locale salvato con successo",
+    });
+  };
+
+  if (!isAuthenticated) {
+    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+  }
+
   return (
     <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
       {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-slate-600">
+      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-slate-600 animate-fade-in">
         <div className="flex items-center gap-3">
           <Settings className="h-8 w-8 text-slate-600" />
           <div>
@@ -47,7 +210,7 @@ const SettingsPage = () => {
       </div>
 
       {/* Profilo */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
@@ -97,11 +260,16 @@ const SettingsPage = () => {
               />
             </div>
           </div>
+          
+          <Button onClick={saveProfile} disabled={isLoading} className="w-full">
+            <Save className="h-4 w-4 mr-2" />
+            {isLoading ? 'Salvataggio...' : 'Salva Profilo'}
+          </Button>
         </CardContent>
       </Card>
 
       {/* Notifiche */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-accent" />
@@ -134,7 +302,7 @@ const SettingsPage = () => {
       </Card>
 
       {/* Privacy */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-green-600" />
@@ -164,15 +332,58 @@ const SettingsPage = () => {
             />
           </div>
           
-          <Button variant="outline" className="w-full">
-            <Shield className="h-4 w-4 mr-2" />
-            Cambia Password
-          </Button>
+          <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Key className="h-4 w-4 mr-2" />
+                Cambia Password
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Cambia Password</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Password Attuale</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Nuova Password</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Conferma Nuova Password</Label>
+                  <Input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={changePassword} disabled={isLoading} className="flex-1">
+                    {isLoading ? 'Cambiando...' : 'Cambia Password'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 
       {/* Aspetto */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-purple-600" />
@@ -194,7 +405,7 @@ const SettingsPage = () => {
       </Card>
 
       {/* Dati */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5 text-blue-600" />
@@ -202,23 +413,48 @@ const SettingsPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button variant="outline" className="w-full">
-            <Database className="h-4 w-4 mr-2" />
-            Esporta Dati
+          <Button variant="outline" className="w-full" onClick={exportData} disabled={isLoading}>
+            <Download className="h-4 w-4 mr-2" />
+            {isLoading ? 'Esportando...' : 'Esporta Dati'}
           </Button>
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" onClick={createBackup}>
+            <Database className="h-4 w-4 mr-2" />
             Backup Locale
           </Button>
-          <Button variant="destructive" className="w-full">
-            Elimina Tutti i Dati
-          </Button>
+          
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" className="w-full">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Elimina Tutti i Dati
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Conferma Eliminazione</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Questa azione eliminerà permanentemente tutti i tuoi dati e non può essere annullata.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="destructive" onClick={deleteAllData} disabled={isLoading} className="flex-1">
+                    {isLoading ? 'Eliminando...' : 'Elimina Tutto'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 
       {/* Logout */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardContent className="p-6">
-          <Button variant="destructive" className="w-full" size="lg">
+          <Button variant="destructive" className="w-full" size="lg" onClick={auth.logout}>
             <LogOut className="h-4 w-4 mr-2" />
             Esci dall'Account
           </Button>
