@@ -514,6 +514,35 @@ export const api = {
     return result.results[0];
   },
 
+  async changePassword(currentPassword: string, newPassword: string) {
+    const user = auth.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // If in development mode, just return success
+    if (!CLOUDFLARE_CONFIG.accountId) {
+      console.log('Mock password change for user:', user.id);
+      return { success: true };
+    }
+
+    // First verify current password
+    const verifyResult = await this.request(
+      'SELECT id FROM users WHERE id = ? AND password = ?',
+      [user.id, currentPassword]
+    );
+
+    if (!verifyResult.results || verifyResult.results.length === 0) {
+      throw new Error('Current password is incorrect');
+    }
+
+    // Update password
+    const result = await this.request(
+      'UPDATE users SET password = ? WHERE id = ? RETURNING id',
+      [newPassword, user.id]
+    );
+
+    return { success: true };
+  },
+
   async exportData() {
     const user = auth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
@@ -548,7 +577,7 @@ export const api = {
       this.request('DELETE FROM users WHERE id = ?', [user.id])
     ]);
 
-    this.auth.logout();
+    auth.logout();
   }
 };
 
