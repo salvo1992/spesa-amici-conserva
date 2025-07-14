@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,19 +87,60 @@ const Recipes = () => {
   };
 
   const shareRecipe = (recipe: Recipe) => {
-    // Simulazione condivisione
     const recipeText = `Ricetta: ${recipe.name}\n\nIngredienti:\n${recipe.ingredients.join('\n')}\n\nPreparazione:\n${recipe.instructions.join('\n')}`;
     
-    if (navigator.share) {
+    // Try native sharing first, fallback to clipboard
+    if (navigator.share && navigator.canShare && navigator.canShare({ text: recipeText })) {
       navigator.share({
         title: recipe.name,
         text: recipeText,
+      }).then(() => {
+        toast({
+          title: "Ricetta condivisa!",
+          description: `${recipe.name} è stata condivisa con successo`,
+        });
+      }).catch((error) => {
+        console.log('Share failed, using clipboard fallback:', error);
+        fallbackToClipboard(recipeText, recipe.name);
       });
     } else {
-      navigator.clipboard.writeText(recipeText);
+      fallbackToClipboard(recipeText, recipe.name);
+    }
+  };
+
+  const fallbackToClipboard = (text: string, recipeName: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast({
+          title: "Ricetta copiata!",
+          description: `${recipeName} è stata copiata negli appunti`,
+        });
+      }).catch(() => {
+        // Final fallback - create a temporary textarea
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          toast({
+            title: "Ricetta copiata!",
+            description: `${recipeName} è stata copiata negli appunti`,
+          });
+        } catch (err) {
+          toast({
+            title: "Errore nella condivisione",
+            description: "Non è possibile condividere la ricetta al momento",
+            variant: "destructive"
+          });
+        }
+        document.body.removeChild(textArea);
+      });
+    } else {
       toast({
-        title: "Ricetta copiata!",
-        description: "La ricetta è stata copiata negli appunti",
+        title: "Condivisione non supportata",
+        description: "Il tuo browser non supporta la condivisione",
+        variant: "destructive"
       });
     }
   };

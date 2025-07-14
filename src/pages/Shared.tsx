@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Share2, Plus, UserPlus, Eye, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Users, Share2, Plus, UserPlus, Eye, Settings, Mail, Trash2, Edit3 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface SharedList {
   id: string;
@@ -40,6 +42,9 @@ const Shared = () => {
   ]);
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [newListType, setNewListType] = useState<'shopping' | 'pantry'>('shopping');
 
   const getTypeColor = (type: string) => {
     return type === 'shopping' ? 'bg-red-500' : 'bg-green-500';
@@ -49,10 +54,55 @@ const Shared = () => {
     return type === 'shopping' ? 'Lista Spesa' : 'Conserve';
   };
 
+  const handleInvite = () => {
+    if (inviteEmail.trim()) {
+      toast({
+        title: "Invito inviato!",
+        description: `Invito inviato a ${inviteEmail}`,
+      });
+      setInviteEmail('');
+    }
+  };
+
+  const handleCreateSharedList = () => {
+    if (newListName.trim()) {
+      const newList: SharedList = {
+        id: Date.now().toString(),
+        name: newListName,
+        owner: 'Te',
+        members: ['Te'],
+        itemCount: 0,
+        lastUpdated: 'ora',
+        type: newListType
+      };
+      setSharedLists([...sharedLists, newList]);
+      setNewListName('');
+      setShowCreateDialog(false);
+      toast({
+        title: "Lista creata!",
+        description: `${newList.name} è stata creata con successo`,
+      });
+    }
+  };
+
+  const handleViewDetails = (list: SharedList) => {
+    toast({
+      title: `Dettagli: ${list.name}`,
+      description: `Visualizzazione dettagli per ${list.name}`,
+    });
+  };
+
+  const handleSettings = (list: SharedList) => {
+    toast({
+      title: `Impostazioni: ${list.name}`,
+      description: `Gestione impostazioni per ${list.name}`,
+    });
+  };
+
   return (
     <div className="p-4 space-y-6 bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-accent">
+      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-accent animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
@@ -60,15 +110,53 @@ const Shared = () => {
             </h1>
             <p className="text-muted-foreground mt-1">Gestisci le tue liste condivise</p>
           </div>
-          <Button className="bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 text-white shadow-lg">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuova Condivisione
-          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 text-white shadow-lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuova Condivisione
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crea Nuova Lista Condivisa</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nome Lista</label>
+                  <Input
+                    placeholder="Es. Lista Famiglia"
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tipo Lista</label>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={newListType}
+                    onChange={(e) => setNewListType(e.target.value as 'shopping' | 'pantry')}
+                  >
+                    <option value="shopping">Lista Spesa</option>
+                    <option value="pantry">Conserve</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleCreateSharedList} className="flex-1">
+                    Crea Lista
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1">
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       {/* Invita utenti */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-accent" />
@@ -83,8 +171,8 @@ const Shared = () => {
               onChange={(e) => setInviteEmail(e.target.value)}
               className="flex-1"
             />
-            <Button className="bg-accent hover:bg-accent/90 text-white">
-              <Share2 className="h-4 w-4 mr-2" />
+            <Button onClick={handleInvite} className="bg-accent hover:bg-accent/90 text-white">
+              <Mail className="h-4 w-4 mr-2" />
               Invita
             </Button>
           </div>
@@ -93,8 +181,8 @@ const Shared = () => {
 
       {/* Liste condivise */}
       <div className="space-y-4">
-        {sharedLists.map((list) => (
-          <Card key={list.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+        {sharedLists.map((list, index) => (
+          <Card key={list.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -132,10 +220,10 @@ const Shared = () => {
                     </div>
                     
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(list)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleSettings(list)}>
                         <Settings className="h-4 w-4" />
                       </Button>
                     </div>
