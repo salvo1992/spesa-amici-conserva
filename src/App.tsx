@@ -8,6 +8,10 @@ import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
 import Pantry from "./pages/Pantry";
+import Recipes from "./pages/Recipes";
+import Shared from "./pages/Shared";
+import Reviews from "./pages/Reviews";
+import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +27,10 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/shopping-list" element={<ShoppingList />} />
             <Route path="/pantry" element={<Pantry />} />
-            {/* TODO: Aggiungi altre route */}
+            <Route path="/recipes" element={<Recipes />} />
+            <Route path="/shared" element={<Shared />} />
+            <Route path="/reviews" element={<Reviews />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
