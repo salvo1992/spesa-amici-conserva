@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
@@ -13,10 +12,35 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Verifica se tutte le credenziali Firebase sono configurate
+const isFirebaseConfigured = () => {
+  return firebaseConfig.apiKey && 
+         firebaseConfig.authDomain && 
+         firebaseConfig.projectId && 
+         firebaseConfig.storageBucket && 
+         firebaseConfig.messagingSenderId && 
+         firebaseConfig.appId;
+};
+
+// Initialize Firebase solo se configurato
+let app: any = null;
+let auth: any = null;
+let db: any = null;
+
+if (isFirebaseConfigured()) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    console.log('Firebase inizializzato correttamente');
+  } catch (error) {
+    console.error('Errore durante l\'inizializzazione di Firebase:', error);
+  }
+} else {
+  console.warn('Firebase non configurato. Aggiungi le variabili d\'ambiente Firebase per abilitare le funzionalità.');
+}
+
+export { auth, db };
 
 export interface User {
   id: string;
@@ -116,9 +140,13 @@ export const CATEGORIES = {
   other: ['Altro', 'Varie', 'Regalo', 'Fai da Te', 'Sport', 'Libri']
 };
 
-// Auth functions with Firebase
+// Auth functions with Firebase - con gestione fallback
 export const firebaseAuth = {
   async login(email: string, password: string) {
+    if (!isFirebaseConfigured()) {
+      throw new Error('Firebase non è configurato. Configura le variabili d\'ambiente Firebase.');
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -151,6 +179,10 @@ export const firebaseAuth = {
   },
 
   async register(email: string, password: string, name: string) {
+    if (!isFirebaseConfigured()) {
+      throw new Error('Firebase non è configurato. Configura le variabili d\'ambiente Firebase.');
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -175,7 +207,9 @@ export const firebaseAuth = {
   },
 
   async logout() {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     window.location.href = '/';
@@ -187,14 +221,28 @@ export const firebaseAuth = {
   },
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('authToken') && !!auth.currentUser;
+    return !!localStorage.getItem('authToken') && isFirebaseConfigured();
   }
 };
 
-// Firebase API functions
+// Firebase API functions con gestione fallback
 export const firebaseApi = {
   // Dashboard stats
   async getDashboardStats() {
+    if (!isFirebaseConfigured()) {
+      // Ritorna dati mock quando Firebase non è configurato
+      return {
+        shoppingItems: 0,
+        pantryItems: 0,
+        recipes: 0,
+        sharedLists: 0,
+        expiringSoon: 0,
+        recentActivity: [
+          { action: 'Configura Firebase per iniziare', time: 'ora', type: 'warning' }
+        ]
+      };
+    }
+
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -232,8 +280,9 @@ export const firebaseApi = {
     }
   },
 
-  // Shopping List operations
   async getShoppingItems() {
+    if (!isFirebaseConfigured()) return [];
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -245,6 +294,8 @@ export const firebaseApi = {
   },
 
   async createShoppingItem(item: Omit<ShoppingItem, 'id' | 'user_id' | 'created_at'>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -258,6 +309,8 @@ export const firebaseApi = {
   },
 
   async updateShoppingItem(id: string, item: Partial<ShoppingItem>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -266,6 +319,8 @@ export const firebaseApi = {
   },
 
   async deleteShoppingItem(id: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -274,6 +329,8 @@ export const firebaseApi = {
 
   // Pantry operations
   async getPantryItems() {
+    if (!isFirebaseConfigured()) return [];
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -285,6 +342,8 @@ export const firebaseApi = {
   },
 
   async createPantryItem(item: Omit<PantryItem, 'id' | 'user_id' | 'created_at'>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -298,16 +357,20 @@ export const firebaseApi = {
   },
 
   async updatePantryItem(id: string, item: Partial<PantryItem>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await updateDoc(doc(db, 'pantry_items', id), item);
     return { id, ...item };
   },
 
   async deletePantryItem(id: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await deleteDoc(doc(db, 'pantry_items', id));
   },
 
   // Recipes operations
   async getRecipes() {
+    if (!isFirebaseConfigured()) return [];
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -319,6 +382,8 @@ export const firebaseApi = {
   },
 
   async createRecipe(recipe: Omit<Recipe, 'id' | 'user_id' | 'created_at'>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -332,16 +397,20 @@ export const firebaseApi = {
   },
 
   async updateRecipe(id: string, recipe: Partial<Recipe>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await updateDoc(doc(db, 'recipes', id), recipe);
     return { id, ...recipe };
   },
 
   async deleteRecipe(id: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await deleteDoc(doc(db, 'recipes', id));
   },
 
   // Shared Lists operations
   async getSharedLists() {
+    if (!isFirebaseConfigured()) return [];
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -353,6 +422,8 @@ export const firebaseApi = {
   },
 
   async createSharedList(list: Omit<SharedList, 'id' | 'owner_id' | 'created_at'>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -366,16 +437,20 @@ export const firebaseApi = {
   },
 
   async updateSharedList(id: string, list: Partial<SharedList>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await updateDoc(doc(db, 'shared_lists', id), list);
     return { id, ...list };
   },
 
   async deleteSharedList(id: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await deleteDoc(doc(db, 'shared_lists', id));
   },
 
   // Reviews operations
   async getReviews() {
+    if (!isFirebaseConfigured()) return [];
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -387,6 +462,8 @@ export const firebaseApi = {
   },
 
   async createReview(review: Omit<Review, 'id' | 'user_id' | 'created_at'>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -401,16 +478,20 @@ export const firebaseApi = {
   },
 
   async updateReview(id: string, review: Partial<Review>) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await updateDoc(doc(db, 'reviews', id), review);
     return { id, ...review };
   },
 
   async deleteReview(id: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
     await deleteDoc(doc(db, 'reviews', id));
   },
 
   // User Profile operations
   async updateProfile(data: { name?: string; email?: string; phone?: string }) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -428,6 +509,8 @@ export const firebaseApi = {
   },
 
   async changePassword(currentPassword: string, newPassword: string) {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     // Firebase handles password changes through Firebase Auth
     // This would require re-authentication in a real implementation
     console.log('Password change would be handled by Firebase Auth');
@@ -435,6 +518,8 @@ export const firebaseApi = {
   },
 
   async exportData() {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -458,6 +543,8 @@ export const firebaseApi = {
   },
 
   async deleteAllData() {
+    if (!isFirebaseConfigured()) throw new Error('Firebase non configurato');
+    
     const user = firebaseAuth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
