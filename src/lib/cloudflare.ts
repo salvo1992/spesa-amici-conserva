@@ -306,8 +306,8 @@ export const api = {
     if (!user) throw new Error('Not authenticated');
 
     const result = await this.request(
-      'INSERT INTO shopping_items (user_id, name, quantity, category, completed, priority, cost, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
-      [user.id, item.name, item.quantity, item.category, item.completed, item.priority, item.cost || null, new Date().toISOString()]
+      'INSERT INTO shopping_items (user_id, name, quantity, category, completed, priority, cost, purchased_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
+      [user.id, item.name, item.quantity, item.category, item.completed, item.priority, item.cost || null, item.purchased_by || null, new Date().toISOString()]
     );
     return result.results[0];
   },
@@ -467,6 +467,36 @@ export const api = {
     return result.results[0];
   },
 
+  async updateSharedList(id: string, list: Partial<SharedList>) {
+    const user = auth.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const updates = Object.entries(list)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key, _]) => `${key} = ?`);
+    
+    const values = Object.values(list).map(value => 
+      Array.isArray(value) || typeof value === 'object' ? JSON.stringify(value) : value
+    ).filter(value => value !== undefined);
+    values.push(id, user.id);
+
+    const result = await this.request(
+      `UPDATE shared_lists SET ${updates.join(', ')} WHERE id = ? AND (owner_id = ? OR members LIKE ?) RETURNING *`,
+      [...values, `%${user.id}%`]
+    );
+    return result.results[0];
+  },
+
+  async deleteSharedList(id: string) {
+    const user = auth.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    await this.request(
+      'DELETE FROM shared_lists WHERE id = ? AND owner_id = ?',
+      [id, user.id]
+    );
+  },
+
   // Reviews operations
   async getReviews() {
     const user = auth.getCurrentUser();
@@ -488,6 +518,34 @@ export const api = {
       [user.id, review.product_name, review.app_review || false, review.rating, review.comment, review.category, 0, new Date().toISOString()]
     );
     return result.results[0];
+  },
+
+  async updateReview(id: string, review: Partial<Review>) {
+    const user = auth.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const updates = Object.entries(review)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key, _]) => `${key} = ?`);
+    
+    const values = Object.values(review).filter(value => value !== undefined);
+    values.push(id, user.id);
+
+    const result = await this.request(
+      `UPDATE reviews SET ${updates.join(', ')} WHERE id = ? AND user_id = ? RETURNING *`,
+      values
+    );
+    return result.results[0];
+  },
+
+  async deleteReview(id: string) {
+    const user = auth.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    await this.request(
+      'DELETE FROM reviews WHERE id = ? AND user_id = ?',
+      [id, user.id]
+    );
   },
 
   // User Profile operations
@@ -547,11 +605,12 @@ export const api = {
     const user = auth.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
-    const [shopping, pantry, recipes, reviews] = await Promise.all([
+    const [shopping, pantry, recipes, reviews, shared] = await Promise.all([
       this.getShoppingItems(),
       this.getPantryItems(),
       this.getRecipes(),
-      this.getReviews()
+      this.getReviews(),
+      this.getSharedLists()
     ]);
 
     return {
@@ -560,6 +619,7 @@ export const api = {
       pantry_items: pantry,
       recipes,
       reviews,
+      shared_lists: shared,
       exported_at: new Date().toISOString()
     };
   },
