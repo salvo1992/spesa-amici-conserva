@@ -149,9 +149,11 @@ const Shared = () => {
         const listWithMeta = {
           ...newList,
           owner: 'Te',
+          members: newList.members || ['Te'], // Ensure members is always an array
           itemCount: 0,
           lastUpdated: 'ora',
-          total_cost: 0
+          total_cost: 0,
+          items: newList.items || [] // Ensure items is always an array
         };
         
         setSharedLists([listWithMeta, ...sharedLists]);
@@ -354,16 +356,16 @@ const Shared = () => {
                     
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-2">
-                        {list.members.slice(0, 3).map((member, index) => (
+                        {(list.members || []).slice(0, 3).map((member, index) => (
                           <Avatar key={index} className="w-8 h-8 border-2 border-white">
                             <AvatarFallback className="text-xs bg-gradient-to-br from-primary to-accent text-white">
                               {member.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                         ))}
-                        {list.members.length > 3 && (
+                        {(list.members || []).length > 3 && (
                           <div className="w-8 h-8 rounded-full bg-muted border-2 border-white flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{list.members.length - 3}</span>
+                            <span className="text-xs text-muted-foreground">+{(list.members || []).length - 3}</span>
                           </div>
                         )}
                       </div>
@@ -430,7 +432,7 @@ const Shared = () => {
 
                     {/* Items list */}
                     <div className="space-y-2">
-                      {list.items.map((item) => (
+                      {(list.items || []).map((item) => (
                         <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${
                           item.completed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
                         }`}>
