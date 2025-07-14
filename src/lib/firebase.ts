@@ -111,6 +111,19 @@ export interface SharedList {
   created_at: string;
 }
 
+export interface DashboardStats {
+  shoppingItems: number;
+  pantryItems: number;
+  recipes: number;
+  sharedLists: number;
+  expiringSoon: number;
+  recentActivity: Array<{
+    type: string;
+    action: string;
+    time: string;
+  }>;
+}
+
 // Mock data for when Firebase is not configured
 const mockShoppingItems: ShoppingItem[] = [
   {
@@ -222,35 +235,118 @@ export const firebaseAuth = {
     return !!auth.currentUser;
   },
   getCurrentUser: () => {
-    if (!auth) return { uid: 'demo', email: 'demo@example.com' };
+    if (!auth) return { uid: 'demo', email: 'demo@example.com', name: 'Demo User' };
     return auth.currentUser;
+  },
+  login: async (email: string, password: string) => {
+    if (!auth) {
+      // Mock login for demo
+      return { user: { uid: 'demo', email, name: 'Demo User' } };
+    }
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result;
+  },
+  register: async (email: string, password: string, name: string) => {
+    if (!auth) {
+      // Mock register for demo
+      return { user: { uid: 'demo', email, name } };
+    }
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result;
+  },
+  logout: async () => {
+    if (!auth) return;
+    await signOut(auth);
   }
 };
 
 // API functions
 export const firebaseApi = {
-  // Auth
-  login: async (email: string, password: string) => {
-    if (!auth) {
-      // Mock login for demo
-      return { user: { uid: 'demo', email } };
+  // Dashboard Stats
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    if (!firestore) {
+      return {
+        shoppingItems: mockShoppingItems.length,
+        pantryItems: mockPantryItems.length,
+        recipes: mockRecipes.length,
+        sharedLists: mockSharedLists.length,
+        expiringSoon: 1,
+        recentActivity: [
+          { type: 'add', action: 'Aggiunto Latte alla lista spesa', time: '2 ore fa' },
+          { type: 'share', action: 'Condivisa lista "Spesa Famiglia"', time: '1 giorno fa' },
+          { type: 'save', action: 'Salvata ricetta "Pasta al Pomodoro"', time: '2 giorni fa' }
+        ]
+      };
     }
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result;
+    
+    try {
+      // In a real implementation, you would fetch data from Firestore
+      // For now, return mock data
+      return {
+        shoppingItems: mockShoppingItems.length,
+        pantryItems: mockPantryItems.length,
+        recipes: mockRecipes.length,
+        sharedLists: mockSharedLists.length,
+        expiringSoon: 1,
+        recentActivity: [
+          { type: 'add', action: 'Aggiunto Latte alla lista spesa', time: '2 ore fa' },
+          { type: 'share', action: 'Condivisa lista "Spesa Famiglia"', time: '1 giorno fa' },
+          { type: 'save', action: 'Salvata ricetta "Pasta al Pomodoro"', time: '2 giorni fa' }
+        ]
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      throw error;
+    }
   },
 
-  register: async (email: string, password: string) => {
-    if (!auth) {
-      // Mock register for demo
-      return { user: { uid: 'demo', email } };
+  // Profile Management
+  updateProfile: async (profileData: any) => {
+    if (!firestore) return;
+    
+    try {
+      // Mock implementation
+      console.log('Profile updated:', profileData);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
     }
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result;
   },
 
-  logout: async () => {
+  changePassword: async (currentPassword: string, newPassword: string) => {
     if (!auth) return;
-    await signOut(auth);
+    
+    try {
+      // Mock implementation
+      console.log('Password changed');
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  },
+
+  // Data Management
+  exportData: async () => {
+    const data = {
+      shoppingItems: mockShoppingItems,
+      pantryItems: mockPantryItems,
+      recipes: mockRecipes,
+      reviews: mockReviews,
+      sharedLists: mockSharedLists
+    };
+    return data;
+  },
+
+  deleteAllData: async () => {
+    if (!firestore) return;
+    
+    try {
+      // Mock implementation
+      console.log('All data deleted');
+    } catch (error) {
+      console.error('Error deleting data:', error);
+      throw error;
+    }
   },
 
   // Shopping Items
@@ -267,8 +363,16 @@ export const firebaseApi = {
     }
   },
 
-  createShoppingItem: async (item: Omit<ShoppingItem, 'id' | 'user_id' | 'created_at'>) => {
-    if (!firestore) return { id: Date.now().toString() };
+  createShoppingItem: async (item: Omit<ShoppingItem, 'id' | 'user_id' | 'created_at'>): Promise<ShoppingItem> => {
+    if (!firestore) {
+      const newItem: ShoppingItem = {
+        id: Date.now().toString(),
+        user_id: 'demo',
+        created_at: new Date().toISOString(),
+        ...item
+      };
+      return newItem;
+    }
     
     const newItem = {
       ...item,
@@ -278,29 +382,34 @@ export const firebaseApi = {
     
     try {
       const docRef = await addDoc(collection(firestore, 'shopping_items'), newItem);
-      return { id: docRef.id };
+      return { id: docRef.id, ...newItem } as ShoppingItem;
     } catch (error) {
       console.error('Error creating shopping item:', error);
       throw error;
     }
   },
 
-  updateShoppingItem: async (id: string, data: Partial<ShoppingItem>) => {
-    if (!firestore) return;
+  updateShoppingItem: async (id: string, data: Partial<ShoppingItem>): Promise<ShoppingItem> => {
+    if (!firestore) {
+      const updatedItem = mockShoppingItems.find(item => item.id === id);
+      return { ...updatedItem!, ...data } as ShoppingItem;
+    }
     
     try {
       await updateDoc(doc(firestore, 'shopping_items', id), data);
+      return { id, ...data } as ShoppingItem;
     } catch (error) {
       console.error('Error updating shopping item:', error);
       throw error;
     }
   },
 
-  deleteShoppingItem: async (id: string) => {
-    if (!firestore) return;
+  deleteShoppingItem: async (id: string): Promise<{ id: string }> => {
+    if (!firestore) return { id };
     
     try {
       await deleteDoc(doc(firestore, 'shopping_items', id));
+      return { id };
     } catch (error) {
       console.error('Error deleting shopping item:', error);
       throw error;
@@ -321,8 +430,16 @@ export const firebaseApi = {
     }
   },
 
-  createPantryItem: async (item: Omit<PantryItem, 'id' | 'user_id' | 'created_at'>) => {
-    if (!firestore) return { id: Date.now().toString() };
+  createPantryItem: async (item: Omit<PantryItem, 'id' | 'user_id' | 'created_at'>): Promise<PantryItem> => {
+    if (!firestore) {
+      const newItem: PantryItem = {
+        id: Date.now().toString(),
+        user_id: 'demo',
+        created_at: new Date().toISOString(),
+        ...item
+      };
+      return newItem;
+    }
     
     const newItem = {
       ...item,
@@ -332,29 +449,34 @@ export const firebaseApi = {
     
     try {
       const docRef = await addDoc(collection(firestore, 'pantry_items'), newItem);
-      return { id: docRef.id };
+      return { id: docRef.id, ...newItem } as PantryItem;
     } catch (error) {
       console.error('Error creating pantry item:', error);
       throw error;
     }
   },
 
-  updatePantryItem: async (id: string, data: Partial<PantryItem>) => {
-    if (!firestore) return;
+  updatePantryItem: async (id: string, data: Partial<PantryItem>): Promise<PantryItem> => {
+    if (!firestore) {
+      const updatedItem = mockPantryItems.find(item => item.id === id);
+      return { ...updatedItem!, ...data } as PantryItem;
+    }
     
     try {
       await updateDoc(doc(firestore, 'pantry_items', id), data);
+      return { id, ...data } as PantryItem;
     } catch (error) {
       console.error('Error updating pantry item:', error);
       throw error;
     }
   },
 
-  deletePantryItem: async (id: string) => {
-    if (!firestore) return;
+  deletePantryItem: async (id: string): Promise<{ id: string }> => {
+    if (!firestore) return { id };
     
     try {
       await deleteDoc(doc(firestore, 'pantry_items', id));
+      return { id };
     } catch (error) {
       console.error('Error deleting pantry item:', error);
       throw error;
@@ -375,8 +497,16 @@ export const firebaseApi = {
     }
   },
 
-  createRecipe: async (recipe: Omit<Recipe, 'id' | 'user_id' | 'created_at'>) => {
-    if (!firestore) return { id: Date.now().toString() };
+  createRecipe: async (recipe: Omit<Recipe, 'id' | 'user_id' | 'created_at'>): Promise<Recipe> => {
+    if (!firestore) {
+      const newRecipe: Recipe = {
+        id: Date.now().toString(),
+        user_id: 'demo',
+        created_at: new Date().toISOString(),
+        ...recipe
+      };
+      return newRecipe;
+    }
     
     const newRecipe = {
       ...recipe,
@@ -386,18 +516,19 @@ export const firebaseApi = {
     
     try {
       const docRef = await addDoc(collection(firestore, 'recipes'), newRecipe);
-      return { id: docRef.id };
+      return { id: docRef.id, ...newRecipe } as Recipe;
     } catch (error) {
       console.error('Error creating recipe:', error);
       throw error;
     }
   },
 
-  deleteRecipe: async (id: string) => {
-    if (!firestore) return;
+  deleteRecipe: async (id: string): Promise<{ id: string }> => {
+    if (!firestore) return { id };
     
     try {
       await deleteDoc(doc(firestore, 'recipes', id));
+      return { id };
     } catch (error) {
       console.error('Error deleting recipe:', error);
       throw error;
@@ -418,8 +549,17 @@ export const firebaseApi = {
     }
   },
 
-  createReview: async (review: Omit<Review, 'id' | 'user_id' | 'created_at'>) => {
-    if (!firestore) return { id: Date.now().toString() };
+  createReview: async (review: Omit<Review, 'id' | 'user_id' | 'created_at' | 'helpful_count'>): Promise<Review> => {
+    if (!firestore) {
+      const newReview: Review = {
+        id: Date.now().toString(),
+        user_id: 'demo',
+        helpful_count: 0,
+        created_at: new Date().toISOString(),
+        ...review
+      };
+      return newReview;
+    }
     
     const newReview = {
       ...review,
@@ -430,18 +570,19 @@ export const firebaseApi = {
     
     try {
       const docRef = await addDoc(collection(firestore, 'reviews'), newReview);
-      return { id: docRef.id };
+      return { id: docRef.id, ...newReview } as Review;
     } catch (error) {
       console.error('Error creating review:', error);
       throw error;
     }
   },
 
-  deleteReview: async (id: string) => {
-    if (!firestore) return;
+  deleteReview: async (id: string): Promise<{ id: string }> => {
+    if (!firestore) return { id };
     
     try {
       await deleteDoc(doc(firestore, 'reviews', id));
+      return { id };
     } catch (error) {
       console.error('Error deleting review:', error);
       throw error;
@@ -462,8 +603,16 @@ export const firebaseApi = {
     }
   },
 
-  createSharedList: async (list: Omit<SharedList, 'id' | 'owner_id' | 'created_at'>) => {
-    if (!firestore) return { id: Date.now().toString() };
+  createSharedList: async (list: Omit<SharedList, 'id' | 'owner_id' | 'created_at'>): Promise<SharedList> => {
+    if (!firestore) {
+      const newList: SharedList = {
+        id: Date.now().toString(),
+        owner_id: 'demo',
+        created_at: new Date().toISOString(),
+        ...list
+      };
+      return newList;
+    }
     
     const newList = {
       ...list,
@@ -473,18 +622,19 @@ export const firebaseApi = {
     
     try {
       const docRef = await addDoc(collection(firestore, 'shared_lists'), newList);
-      return { id: docRef.id };
+      return { id: docRef.id, ...newList } as SharedList;
     } catch (error) {
       console.error('Error creating shared list:', error);
       throw error;
     }
   },
 
-  deleteSharedList: async (id: string) => {
-    if (!firestore) return;
+  deleteSharedList: async (id: string): Promise<{ id: string }> => {
+    if (!firestore) return { id };
     
     try {
       await deleteDoc(doc(firestore, 'shared_lists', id));
+      return { id };
     } catch (error) {
       console.error('Error deleting shared list:', error);
       throw error;
