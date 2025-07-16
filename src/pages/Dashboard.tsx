@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,6 @@ import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus,
 import { useQuery } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi } from '@/lib/firebase';
 import AuthForm from '@/components/AuthForm';
-import FirebaseSetup from '@/components/FirebaseSetup';
 
 const Dashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,13 +21,6 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Verifica se Firebase è configurato
-  const isFirebaseConfigured = () => {
-    return import.meta.env.VITE_FIREBASE_API_KEY && 
-           import.meta.env.VITE_FIREBASE_AUTH_DOMAIN && 
-           import.meta.env.VITE_FIREBASE_PROJECT_ID;
-  };
-
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: firebaseApi.getDashboardStats,
@@ -38,11 +31,6 @@ const Dashboard = () => {
     setIsAuthenticated(true);
     setUser(userData);
   };
-
-  // Mostra la schermata di configurazione se Firebase non è configurato
-  if (!isFirebaseConfigured()) {
-    return <FirebaseSetup />;
-  }
 
   if (!isAuthenticated) {
     return <AuthForm onAuthSuccess={handleAuthSuccess} />;
