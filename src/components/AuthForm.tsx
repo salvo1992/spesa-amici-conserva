@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,23 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
+      // Credenziali di test temporanee
+      if (loginForm.email === 'admin' && loginForm.password === 'password') {
+        const testUser = {
+          uid: 'test-user-123',
+          email: 'admin@test.com',
+          name: 'Admin Test'
+        };
+        
+        toast({
+          title: "Accesso effettuato!",
+          description: "Benvenuto nell'app (modalità test)",
+        });
+        onAuthSuccess(testUser);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await firebaseAuth.login(loginForm.email, loginForm.password);
       toast({
         title: "Accesso effettuato!",
@@ -90,6 +108,14 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           <p className="text-muted-foreground mt-2">
             Gestisci la tua cucina con stile
           </p>
+          {/* Credenziali di test temporanee */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-xs text-blue-700 font-medium">🧪 MODALITÀ TEST</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Email: <strong>admin</strong><br />
+              Password: <strong>password</strong>
+            </p>
+          </div>
         </CardHeader>
         
         <CardContent>
@@ -107,8 +133,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-email"
-                      type="email"
-                      placeholder="mario@email.com"
+                      type="text"
+                      placeholder="admin o mario@email.com"
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
                       className="pl-10"
@@ -124,7 +150,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                     <Input
                       id="login-password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder="password o ••••••••"
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
                       className="pl-10 pr-10"
