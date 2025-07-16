@@ -7,7 +7,6 @@ import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus,
 import { useQuery } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi } from '@/lib/firebase';
 import AuthForm from '@/components/AuthForm';
-import FirebaseSetup from '@/components/FirebaseSetup';
 
 const Dashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
