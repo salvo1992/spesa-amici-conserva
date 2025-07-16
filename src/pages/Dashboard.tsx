@@ -86,7 +86,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Ciao {user?.name}! 👋
+              Ciao {user?.name || 'Utente'}! 👋
             </h1>
             <p className="text-muted-foreground mt-1">Ecco la panoramica della tua cucina</p>
           </div>
@@ -157,7 +157,7 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {stats?.recentActivity?.map((activity, index) => (
+            {stats?.recentActivity?.length > 0 ? stats.recentActivity.map((activity, index) => (
               <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className={`w-2 h-2 rounded-full ${
                   activity.type === 'add' ? 'bg-green-500' :
@@ -170,7 +170,11 @@ const Dashboard = () => {
                   <p className="text-xs text-muted-foreground">{activity.time}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Nessuna attività recente</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
