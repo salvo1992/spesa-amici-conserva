@@ -1,331 +1,126 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Star, Plus, ThumbsUp, Filter, Edit, Trash2, MessageSquare } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firebaseAuth, firebaseApi, CATEGORIES, type Review } from '@/lib/firebase';
+import { Star, MessageSquare, ThumbsUp, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Reviews = () => {
-  const { isAuthenticated } = useAuth();
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingReview, setEditingReview] = useState<Review | null>(null);
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterRating, setFilterRating] = useState('all');
+  const { user } = useAuth();
 
-  const [newReview, setNewReview] = useState({
-    product_name: '',
-    app_review: false,
-    rating: 5,
-    comment: '',
-    category: ''
-  });
-
-  const queryClient = useQueryClient();
-
-  const { data: reviews = [], isLoading } = useQuery({
-    queryKey: ['reviews'],
-    queryFn: firebaseApi.getReviews,
-    enabled: isAuthenticated
-  });
-
-  const createMutation = useMutation({
-    mutationFn: firebaseApi.createReview,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reviews'] });
-      setShowAddDialog(false);
-      setNewReview({ product_name: '', app_review: false, rating: 5, comment: '', category: '' });
-      toast({ title: "Recensione salvata", description: "La tua recensione è stata pubblicata" });
+  const reviews = [
+    {
+      id: 1,
+      recipe: "Pasta alla Carbonara",
+      rating: 5,
+      comment: "Assolutamente deliziosa! La migliore carbonara che abbia mai fatto.",
+      author: "Maria R.",
+      date: "2024-01-15",
+      helpful: 12
+    },
+    {
+      id: 2,
+      recipe: "Tiramisù della Nonna",
+      rating: 4,
+      comment: "Ottima ricetta, molto facile da seguire. Il risultato è stato fantastico.",
+      author: "Giuseppe M.",
+      date: "2024-01-10",
+      helpful: 8
+    },
+    {
+      id: 3,
+      recipe: "Risotto ai Funghi",
+      rating: 5,
+      comment: "Cremoso e saporito, esattamente come quello del ristorante!",
+      author: "Anna P.",
+      date: "2024-01-08",
+      helpful: 15
     }
-  });
+  ];
 
-  const deleteMutation = useMutation({
-    mutationFn: firebaseApi.deleteReview,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reviews'] });
-      toast({ title: "Recensione eliminata", description: "La recensione è stata rimossa" });
-    }
-  });
-
-  const addReview = () => {
-    if (!newReview.comment.trim()) return;
-    
-    createMutation.mutate({
-      product_name: newReview.app_review ? undefined : newReview.product_name,
-      app_review: newReview.app_review,
-      rating: newReview.rating,
-      comment: newReview.comment,
-      category: newReview.category || 'Generale',
-      helpful_count: 0
-    });
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        }`}
+      />
+    ));
   };
-
-  const deleteReview = (id: string) => {
-    deleteMutation.mutate(id);
-  };
-
-  const renderStars = (rating: number, size = 'sm') => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`${size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} ${
-              star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  const filteredReviews = reviews.filter(review => {
-    const categoryMatch = filterCategory === 'all' || review.category === filterCategory;
-    const ratingMatch = filterRating === 'all' || review.rating.toString() === filterRating;
-    return categoryMatch && ratingMatch;
-  });
-
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-    : 0;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
-      {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-yellow-600 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Star className="h-8 w-8 text-yellow-600" />
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-700 to-yellow-900 bg-clip-text text-transparent">
-                Recensioni
-              </h1>
-              <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                {filteredReviews.length} recensioni • 
-                <span className="flex items-center gap-1">
-                  {renderStars(Math.round(averageRating))}
-                  <span className="font-medium">{averageRating.toFixed(1)}</span>
-                </span>
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Recensioni e Valutazioni
+          </h1>
+          <div className="text-muted-foreground">
+            Condividi la tua esperienza con le ricette
           </div>
-          
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova Recensione
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Scrivi una Recensione</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="app-review"
-                    checked={newReview.app_review}
-                    onChange={(e) => setNewReview({...newReview, app_review: e.target.checked})}
-                    className="rounded"
-                  />
-                  <Label htmlFor="app-review">Recensione dell'app Food Manager</Label>
-                </div>
-
-                {!newReview.app_review && (
-                  <div>
-                    <Label>Nome Prodotto</Label>
-                    <Input
-                      value={newReview.product_name}
-                      onChange={(e) => setNewReview({...newReview, product_name: e.target.value})}
-                      placeholder="Es. Pasta Barilla, Olio Colavita..."
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <Label>Categoria</Label>
-                  <Select value={newReview.category} onValueChange={(value) => setNewReview({...newReview, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {newReview.app_review ? (
-                        <SelectItem value="App">App</SelectItem>
-                      ) : (
-                        <>
-                          {CATEGORIES.food.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
-                          {CATEGORIES.home.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Valutazione</Label>
-                  <div className="flex items-center gap-2 mt-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setNewReview({...newReview, rating: star})}
-                        className="p-1"
-                      >
-                        <Star
-                          className={`h-6 w-6 ${
-                            star <= newReview.rating 
-                              ? 'fill-yellow-400 text-yellow-400' 
-                              : 'text-gray-300 hover:text-yellow-300'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      {newReview.rating} stella{newReview.rating !== 1 ? 'e' : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Commento</Label>
-                  <Textarea
-                    value={newReview.comment}
-                    onChange={(e) => setNewReview({...newReview, comment: e.target.value})}
-                    placeholder="Condividi la tua esperienza..."
-                    rows={4}
-                  />
-                </div>
-
-                <Button onClick={addReview} disabled={createMutation.isPending} className="w-full">
-                  {createMutation.isPending ? 'Pubblicando...' : 'Pubblica Recensione'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
-      </div>
 
-      {/* Filters */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Filtri:</span>
-            </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tutte le categorie" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutte le categorie</SelectItem>
-                <SelectItem value="App">App</SelectItem>
-                {[...CATEGORIES.food, ...CATEGORIES.home].map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterRating} onValueChange={setFilterRating}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tutte le valutazioni" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutte le valutazioni</SelectItem>
-                <SelectItem value="5">5 stelle</SelectItem>
-                <SelectItem value="4">4 stelle</SelectItem>
-                <SelectItem value="3">3 stelle</SelectItem>
-                <SelectItem value="2">2 stelle</SelectItem>
-                <SelectItem value="1">1 stella</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Reviews */}
-      <div className="grid gap-4">
-        {filteredReviews.map((review) => (
-          <Card key={review.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in transition-all duration-300 hover:shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    {review.app_review ? (
-                      <Badge variant="default" className="bg-purple-100 text-purple-800">
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Recensione App
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">{review.product_name}</Badge>
-                    )}
-                    <Badge variant="outline">{review.category}</Badge>
-                    <div className="ml-auto flex items-center gap-2">
-                      {renderStars(review.rating)}
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </span>
+        <div className="grid gap-6">
+          {reviews.map((review) => (
+            <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg text-foreground">{review.recipe}</CardTitle>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <div className="flex space-x-1">
+                          {renderStars(review.rating)}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          di {review.author}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  
-                  <p className="text-gray-700 mb-3">{review.comment}</p>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                      <ThumbsUp className="h-4 w-4" />
-                      <span>{review.helpful_count} utili</span>
-                    </button>
+                  <Badge variant="secondary" className="text-xs">
+                    {review.date}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <MessageSquare className="h-4 w-4 text-gray-500 mb-2" />
+                  <div className="text-gray-700 leading-relaxed">
+                    {review.comment}
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setEditingReview(review)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => deleteReview(review.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2 text-gray-500">
+                    <ThumbsUp className="h-4 w-4" />
+                    <span>{review.helpful} persone hanno trovato utile questa recensione</span>
+                  </div>
+                  <button className="text-primary hover:text-primary/80 font-medium transition-colors">
+                    Utile
+                  </button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        
-        {filteredReviews.length === 0 && (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <CardContent className="p-8 text-center">
-              <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nessuna recensione trovata</h3>
-              <p className="text-muted-foreground mb-4">
-                {reviews.length === 0 ? 'Inizia scrivendo la tua prima recensione!' : 'Prova a modificare i filtri di ricerca.'}
-              </p>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Scrivi Recensione
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="mt-8 card-hover shadow-lg border-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+          <CardContent className="p-6 text-center">
+            <h3 className="text-xl font-semibold mb-2">Vuoi condividere la tua recensione?</h3>
+            <div className="text-blue-100 mb-4">
+              Aiuta altri cuochi condividendo la tua esperienza
+            </div>
+            <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+              Scrivi una Recensione
+            </button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
