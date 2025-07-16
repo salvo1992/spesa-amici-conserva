@@ -11,10 +11,10 @@ import { Star, Plus, ThumbsUp, Filter, Edit, Trash2, MessageSquare } from 'lucid
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, CATEGORIES, type Review } from '@/lib/firebase';
-import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Reviews = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuth.isAuthenticated());
+  const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -53,14 +53,6 @@ const Reviews = () => {
       toast({ title: "Recensione eliminata", description: "La recensione è stata rimossa" });
     }
   });
-
-  const handleAuthSuccess = (userData: any) => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
 
   const addReview = () => {
     if (!newReview.comment.trim()) return;

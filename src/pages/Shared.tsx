@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +10,10 @@ import { Users, Plus, Share2, UserPlus, Trash2, Edit, Copy, ShoppingCart, Packag
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type SharedList } from '@/lib/firebase';
-import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Shared = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuth.isAuthenticated());
+  const { isAuthenticated } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedList, setSelectedList] = useState<SharedList | null>(null);
@@ -51,14 +50,6 @@ const Shared = () => {
       toast({ title: "Lista eliminata", description: "La lista condivisa è stata eliminata" });
     }
   });
-
-  const handleAuthSuccess = (userData: any) => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
 
   const addMember = () => {
     setNewList({
@@ -282,7 +273,7 @@ const Shared = () => {
                   </Button>
                 </div>
               </div>
-            </CardHeader>
+              </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
                 <div>

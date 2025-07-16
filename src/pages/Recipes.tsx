@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { ChefHat, Plus, Clock, Users, Edit, Trash2, Filter, Heart, Star } from '
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
-import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const recipeCategories = [
   'Primi Piatti', 'Secondi Piatti', 'Contorni', 'Antipasti', 
@@ -20,7 +19,7 @@ const recipeCategories = [
 ];
 
 const Recipes = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuth.isAuthenticated());
+  const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -64,14 +63,6 @@ const Recipes = () => {
       toast({ title: "Ricetta eliminata", description: "La ricetta è stata rimossa dalla collezione" });
     }
   });
-
-  const handleAuthSuccess = (userData: any) => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
 
   const addIngredient = () => {
     setNewRecipe({

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,11 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Settings, User, Bell, Shield, Palette, Database, LogOut, Camera, Save, Download, Trash2, Key } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { firebaseAuth, firebaseApi } from '@/lib/firebase';
-import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SettingsPage = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -39,27 +39,14 @@ const SettingsPage = () => {
   });
 
   useEffect(() => {
-    const currentUser = firebaseAuth.getCurrentUser();
-    if (currentUser) {
-      setIsAuthenticated(true);
-      setUser(currentUser);
+    if (user) {
       setProfile({
-        name: currentUser.name || '',
-        email: currentUser.email || '',
+        name: user.name || '',
+        email: user.email || '',
         phone: '' // Initialize phone as empty string since it's not in user object
       });
     }
-  }, []);
-
-  const handleAuthSuccess = (userData: any) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    setProfile({
-      name: userData.name || '',
-      email: userData.email || '',
-      phone: '' // Initialize phone as empty string
-    });
-  };
+  }, [user]);
 
   const updateSetting = (key: string, value: boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -157,7 +144,7 @@ const SettingsPage = () => {
         description: "Tutti i tuoi dati sono stati eliminati",
       });
       setShowDeleteDialog(false);
-      firebaseAuth.logout();
+      logout();
     } catch (error) {
       toast({
         title: "Errore",
@@ -188,10 +175,6 @@ const SettingsPage = () => {
       description: "Backup locale salvato con successo",
     });
   };
-
-  if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
 
   return (
     <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
@@ -453,7 +436,7 @@ const SettingsPage = () => {
       {/* Logout */}
       <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
         <CardContent className="p-6">
-          <Button variant="destructive" className="w-full" size="lg" onClick={firebaseAuth.logout}>
+          <Button variant="destructive" className="w-full" size="lg" onClick={logout}>
             <LogOut className="h-4 w-4 mr-2" />
             Esci dall'Account
           </Button>

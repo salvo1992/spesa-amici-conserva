@@ -11,10 +11,10 @@ import { Package, Plus, AlertTriangle, CheckCircle, Clock, Edit, Trash2, Filter 
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, CATEGORIES, type PantryItem } from '@/lib/firebase';
-import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Pantry = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuth.isAuthenticated());
+  const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -63,14 +63,6 @@ const Pantry = () => {
       toast({ title: "Prodotto eliminato", description: "Il prodotto è stato rimosso dalla dispensa" });
     }
   });
-
-  const handleAuthSuccess = (userData: any) => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
 
   const addItem = () => {
     if (!newItem.name.trim()) return;
