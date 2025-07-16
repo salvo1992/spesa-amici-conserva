@@ -46,7 +46,7 @@ const SettingsPage = () => {
       setProfile({
         name: currentUser.name || '',
         email: currentUser.email || '',
-        phone: currentUser.phone || ''
+        phone: '' // Initialize phone as empty string since it's not in user object
       });
     }
   }, []);
@@ -57,7 +57,7 @@ const SettingsPage = () => {
     setProfile({
       name: userData.name || '',
       email: userData.email || '',
-      phone: userData.phone || ''
+      phone: '' // Initialize phone as empty string
     });
   };
 

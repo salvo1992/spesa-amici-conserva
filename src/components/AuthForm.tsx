@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,8 +62,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     try {
       const result = await firebaseAuth.register(
         registerForm.email, 
-        registerForm.password, 
-        registerForm.name
+        registerForm.password
       );
       toast({
         title: "Registrazione completata!",
