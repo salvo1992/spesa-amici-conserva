@@ -27,22 +27,22 @@ function App() {
       <AuthProvider>
         <LanguageProvider>
           <Router>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/shopping-list" element={<ShoppingList />} />
-                <Route path="/pantry" element={<Pantry />} />
-                <Route path="/recipes" element={<Recipes />} />
-                <Route path="/meal-planning" element={<MealPlanning />} />
-                <Route path="/shared" element={<Shared />} />
-                <Route path="/reviews" element={<Reviews />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Index />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="shopping-list" element={<ShoppingList />} />
+                <Route path="pantry" element={<Pantry />} />
+                <Route path="recipes" element={<Recipes />} />
+                <Route path="meal-planning" element={<MealPlanning />} />
+                <Route path="shared" element={<Shared />} />
+                <Route path="reviews" element={<Reviews />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="privacy" element={<Privacy />} />
+                <Route path="terms" element={<Terms />} />
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
+              </Route>
+            </Routes>
             <CookieBanner />
             <Toaster />
           </Router>
