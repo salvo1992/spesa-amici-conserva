@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChefHat, Plus, Clock, Users, Search, Heart, Star, Filter, BookOpen } from 'lucide-react';
+import { ChefHat, Plus, Clock, Users, Search, Heart, Star, Filter, BookOpen, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, CATEGORIES, type Recipe } from '@/lib/firebase';
@@ -17,8 +16,12 @@ import { useAuth } from '@/contexts/AuthContext';
 const Recipes = () => {
   const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [ratings, setRatings] = useState<{[key: string]: number}>({});
 
   const [newRecipe, setNewRecipe] = useState({
     name: '',
@@ -168,6 +171,31 @@ const Recipes = () => {
     }
   });
 
+  const toggleFavorite = (recipeId: string) => {
+    setFavorites(prev => 
+      prev.includes(recipeId) 
+        ? prev.filter(id => id !== recipeId)
+        : [...prev, recipeId]
+    );
+    toast({ 
+      title: favorites.includes(recipeId) ? "Rimosso dai preferiti" : "Aggiunto ai preferiti",
+      description: "Le tue preferenze sono state aggiornate"
+    });
+  };
+
+  const setRating = (recipeId: string, rating: number) => {
+    setRatings(prev => ({ ...prev, [recipeId]: rating }));
+    toast({ 
+      title: "Valutazione salvata", 
+      description: `Hai dato ${rating} stelle a questa ricetta` 
+    });
+  };
+
+  const viewRecipe = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setShowDetailsDialog(true);
+  };
+
   const addIngredient = () => {
     setNewRecipe({...newRecipe, ingredients: [...newRecipe.ingredients, '']});
   };
@@ -176,13 +204,13 @@ const Recipes = () => {
     setNewRecipe({...newRecipe, instructions: [...newRecipe.instructions, '']});
   };
 
-  const updateIngredient = (index, value) => {
+  const updateIngredient = (index: number, value: string) => {
     const updated = [...newRecipe.ingredients];
     updated[index] = value;
     setNewRecipe({...newRecipe, ingredients: updated});
   };
 
-  const updateInstruction = (index, value) => {
+  const updateInstruction = (index: number, value: string) => {
     const updated = [...newRecipe.instructions];
     updated[index] = value;
     setNewRecipe({...newRecipe, instructions: updated});
@@ -246,6 +274,7 @@ const Recipes = () => {
                 <DialogTitle>Crea Nuova Ricetta</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Nome Ricetta</Label>
@@ -403,8 +432,13 @@ const Recipes = () => {
                     </Badge>
                   )}
                 </div>
-                <Button size="sm" variant="ghost" className="text-red-500">
-                  <Heart className="h-4 w-4" />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className={`${favorites.includes(recipe.id) ? 'text-red-500' : 'text-gray-400'} hover:text-red-500`}
+                  onClick={() => toggleFavorite(recipe.id)}
+                >
+                  <Heart className={`h-4 w-4 ${favorites.includes(recipe.id) ? 'fill-current' : ''}`} />
                 </Button>
               </div>
             </CardHeader>
@@ -441,11 +475,21 @@ const Recipes = () => {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button size="sm" className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
+                  <Button 
+                    size="sm" 
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    onClick={() => viewRecipe(recipe)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
                     Visualizza
                   </Button>
-                  <Button size="sm" variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
-                    <Star className="h-4 w-4" />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className={`border-orange-300 hover:bg-orange-50 ${ratings[recipe.id] ? 'text-yellow-600' : 'text-orange-700'}`}
+                    onClick={() => setRating(recipe.id, ratings[recipe.id] ? 0 : 5)}
+                  >
+                    <Star className={`h-4 w-4 ${ratings[recipe.id] ? 'fill-current text-yellow-500' : ''}`} />
                   </Button>
                 </div>
               </div>
@@ -453,6 +497,72 @@ const Recipes = () => {
           </Card>
         ))}
       </div>
+
+      {/* Recipe Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-orange-900 bg-clip-text text-transparent">
+              {selectedRecipe?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedRecipe && (
+            <div className="space-y-6 mt-6">
+              <div className="flex items-center gap-6 p-4 bg-orange-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium">{selectedRecipe.prep_time} minuti</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium">{selectedRecipe.servings} porzioni</span>
+                </div>
+                <Badge className="bg-orange-100 text-orange-700">
+                  {selectedRecipe.category}
+                </Badge>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Descrizione</h3>
+                <p className="text-muted-foreground leading-relaxed">{selectedRecipe.description}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Ingredienti</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {selectedRecipe.ingredients.map((ingredient, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-3 p-3 bg-white rounded-lg border hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                      <span className="text-sm">{ingredient}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Preparazione</h3>
+                <div className="space-y-4">
+                  {selectedRecipe.instructions.map((instruction, index) => (
+                    <div 
+                      key={index}
+                      className="flex gap-4 p-4 bg-white rounded-lg border-l-4 border-orange-500 hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-relaxed">{instruction}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       {filteredRecipes.length === 0 && (
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
