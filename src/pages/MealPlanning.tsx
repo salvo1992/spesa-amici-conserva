@@ -23,7 +23,7 @@ import AddFamilyMemberModal from '@/components/AddFamilyMemberModal';
 const MealPlanning = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [defaultMemberAdded, setDefaultMemberAdded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const queryClient = useQueryClient();
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
@@ -50,7 +50,6 @@ const MealPlanning = () => {
     mutationFn: firebaseApi.createFamilyMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['family-members'] });
-      setDefaultMemberAdded(true);
       toast({
         title: "Membro aggiunto",
         description: "Il membro è stato aggiunto con successo",
@@ -81,15 +80,18 @@ const MealPlanning = () => {
     },
   });
 
-  // Crea automaticamente il membro "Io" se non ci sono membri (solo una volta)
+  // Inizializzazione: crea automaticamente il membro "Io" se necessario
   useEffect(() => {
-    if (!loadingMembers && familyMembers.length === 0 && !defaultMemberAdded && !addMemberMutation.isPending) {
-      console.log('Adding default member "Io"');
-      addMemberMutation.mutate({ name: 'Io' });
+    if (!loadingMembers && !isInitialized) {
+      if (familyMembers.length === 0 && !addMemberMutation.isPending) {
+        console.log('Adding default member "Io"');
+        addMemberMutation.mutate({ name: 'Io' });
+      }
+      setIsInitialized(true);
     }
-  }, [familyMembers.length, loadingMembers, defaultMemberAdded, addMemberMutation]);
+  }, [loadingMembers, familyMembers.length, isInitialized, addMemberMutation]);
 
-  // Inizializza con il primo membro se disponibile
+  // Seleziona automaticamente il primo membro se disponibile
   useEffect(() => {
     if (familyMembers.length > 0 && selectedMembers.length === 0) {
       console.log('Setting first member as selected:', familyMembers[0]);
@@ -132,7 +134,7 @@ const MealPlanning = () => {
 
   if (loadingMembers) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">Caricamento...</div>
         </div>
@@ -143,31 +145,33 @@ const MealPlanning = () => {
   console.log('Rendering with:', {
     familyMembers,
     selectedMembers,
-    defaultMemberAdded,
+    isInitialized,
     addMemberPending: addMemberMutation.isPending
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-2">
+        <div className="mb-8 text-center animate-fade-in">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-400 dark:to-orange-400 bg-clip-text text-transparent mb-2 animate-slide-up">
             Piano Alimentare Settimanale
           </h1>
-          <div className="text-muted-foreground">
+          <div className="text-muted-foreground animate-fade-in">
             Organizza i pasti per tutta la famiglia
           </div>
         </div>
 
         <div className="mb-8">
-          <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm animate-fade-in">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <CalendarDays className="w-6 h-6 text-red-600" />
+                  <CalendarDays className="w-6 h-6 text-red-600 dark:text-red-400" />
                   <h2 className="text-xl font-semibold">Seleziona i Partecipanti</h2>
                 </div>
-                <AddFamilyMemberModal onAddMember={handleAddMember} />
+                <div className="animate-scale-in">
+                  <AddFamilyMemberModal onAddMember={handleAddMember} />
+                </div>
               </div>
               {familyMembers.length > 0 ? (
                 <FamilyMemberSelect
@@ -185,20 +189,20 @@ const MealPlanning = () => {
           </Card>
         </div>
 
-        <div className="mb-8 px-12">
+        <div className="mb-8 relative">
           <Carousel
             opts={{ align: "start" }}
-            className="w-full"
+            className="w-full max-w-5xl mx-auto"
           >
             <CarouselContent className="-ml-4">
               {weekDates.map((date, index) => (
                 <CarouselItem key={date.toISOString()} className="pl-4 basis-auto">
                   <Button
                     variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                    className={`w-[120px] h-[64px] flex flex-col items-center justify-center gap-1 ${
+                    className={`w-[120px] h-[64px] flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
                       isSameDay(date, selectedDate) 
-                        ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                        : 'hover:bg-red-50 border-red-200'
+                        ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white' 
+                        : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700'
                     }`}
                     onClick={() => setSelectedDate(date)}
                   >
@@ -212,13 +216,13 @@ const MealPlanning = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="text-red-600 border-red-200 -left-6" />
-            <CarouselNext className="text-red-600 border-red-200 -right-6" />
+            <CarouselPrevious className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 -left-12" />
+            <CarouselNext className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 -right-12" />
           </Carousel>
         </div>
 
         {selectedMembers.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-fade-in">
             {selectedMembers.map(memberId => {
               const member = familyMembers.find(m => m.id === memberId);
               if (!member) return null;
