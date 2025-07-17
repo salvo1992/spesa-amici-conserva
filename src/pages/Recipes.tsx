@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ChefHat, Plus, Clock, Users, Search, Heart, Star, Filter, BookOpen, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firebaseAuth, firebaseApi, CATEGORIES, type Recipe } from '@/lib/firebase';
+import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Recipes = () => {
@@ -34,7 +34,7 @@ const Recipes = () => {
   });
 
   // Ricette di default
-  const defaultRecipes = [
+  const defaultRecipes: Recipe[] = [
     {
       id: 'default-1',
       name: 'Spaghetti alla Carbonara',
@@ -44,7 +44,8 @@ const Recipes = () => {
       prep_time: 25,
       servings: 4,
       category: 'Primi Piatti',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-2', 
@@ -55,7 +56,8 @@ const Recipes = () => {
       prep_time: 45,
       servings: 8,
       category: 'Dolci',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-3',
@@ -66,7 +68,8 @@ const Recipes = () => {
       prep_time: 35,
       servings: 4,
       category: 'Primi Piatti',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-4',
@@ -77,7 +80,8 @@ const Recipes = () => {
       prep_time: 150,
       servings: 4,
       category: 'Pizze',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-5',
@@ -88,7 +92,8 @@ const Recipes = () => {
       prep_time: 120,
       servings: 4,
       category: 'Secondi Piatti',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-6',
@@ -99,7 +104,8 @@ const Recipes = () => {
       prep_time: 90,
       servings: 6,
       category: 'Contorni',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-7',
@@ -110,7 +116,8 @@ const Recipes = () => {
       prep_time: 60,
       servings: 8,
       category: 'Dolci',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-8',
@@ -121,7 +128,8 @@ const Recipes = () => {
       prep_time: 180,
       servings: 8,
       category: 'Primi Piatti',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-9',
@@ -132,7 +140,8 @@ const Recipes = () => {
       prep_time: 15,
       servings: 4,
       category: 'Primi Piatti',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: 'default-10',
@@ -143,7 +152,8 @@ const Recipes = () => {
       prep_time: 60,
       servings: 12,
       category: 'Dolci',
-      user_id: 'default'
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     }
   ];
 
