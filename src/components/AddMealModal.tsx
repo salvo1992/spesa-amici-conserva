@@ -128,7 +128,6 @@ const AddMealModal = ({
                     <div className="flex items-start gap-3">
                       <Checkbox 
                         checked={selectedRecipes.some(r => r.id === recipe.id)}
-                        readOnly
                       />
                       <div className="flex-1">
                         <h3 className="font-semibold text-red-800">{recipe.name}</h3>
