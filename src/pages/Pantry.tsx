@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,6 @@ const Pantry = () => {
     'Conserve', 'Bevande', 'Condimenti', 'Dolci', 'Surgelati', 'Generico'
   ];
 
-  // Elementi di prova aggiornati con tipo
   const [pantryItems, setPantryItems] = useState([
     {
       id: 'pantry-1',
@@ -215,7 +213,7 @@ const Pantry = () => {
                     <SelectItem value="all">Tutte</SelectItem>
                     <SelectItem value="low">Bassa (≤2)</SelectItem>
                     <SelectItem value="medium">Media (3-5)</SelectItem>
-                    <SelectItem value="high">Alta (>5)</SelectItem>
+                    <SelectItem value="high">Alta (&gt;5)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
