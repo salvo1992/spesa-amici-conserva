@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from "date-fns";
 import { it } from 'date-fns/locale';
@@ -103,21 +102,9 @@ const MealPlanning = () => {
     },
   });
 
-  // Create default member "Io" if no members exist
-  useEffect(() => {
-    if (!loadingMembers && familyMembers.length === 0 && !addMemberMutation.isPending) {
-      console.log('Creating default member "Io"');
-      addMemberMutation.mutate({ name: 'Io' });
-    }
-  }, [loadingMembers, familyMembers.length, addMemberMutation.isPending]);
-
-  // Auto-select first member when available
-  useEffect(() => {
-    if (familyMembers.length > 0 && selectedMembers.length === 0) {
-      console.log('Auto-selecting first member:', familyMembers[0]);
-      setSelectedMembers([familyMembers[0].id]);
-    }
-  }, [familyMembers, selectedMembers.length]);
+  const getMealsForMember = (memberId: string) => {
+    return mealPlans.filter(plan => plan.member_id === memberId);
+  };
 
   const handleAddMember = (name: string) => {
     console.log('Manually adding member:', name);
@@ -149,10 +136,6 @@ const MealPlanning = () => {
     addMealMutation.mutate(newMealPlan);
   };
 
-  const getMealsForMember = (memberId: string) => {
-    return mealPlans.filter(plan => plan.member_id === memberId);
-  };
-
   if (loadingMembers) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
@@ -166,25 +149,34 @@ const MealPlanning = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header con stile migliorato */}
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-400 dark:to-orange-400 bg-clip-text text-transparent mb-2 animate-slide-up">
+          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent mb-4 animate-slide-up tracking-tight">
             Piano Alimentare Settimanale
           </h1>
-          <div className="text-muted-foreground animate-fade-in">
-            Organizza i pasti per tutta la famiglia
+          <div className="text-lg text-muted-foreground animate-fade-in max-w-2xl mx-auto">
+            Organizza i pasti per tutta la famiglia con facilità e precisione
           </div>
         </div>
 
+        {/* Card membri con bottone stilizzato */}
         <div className="mb-8">
-          <Card className="border-0 shadow-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm animate-fade-in">
-            <CardContent className="p-6">
+          <Card className="border-0 shadow-xl bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm animate-fade-in ring-1 ring-red-100 dark:ring-red-900/20">
+            <CardContent className="p-8">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <CalendarDays className="w-6 h-6 text-red-600 dark:text-red-400" />
-                  <h2 className="text-xl font-semibold">Seleziona i Partecipanti</h2>
+                  <div className="p-3 rounded-full bg-gradient-to-r from-red-500 to-orange-500">
+                    <CalendarDays className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seleziona i Partecipanti</h2>
                 </div>
                 <div className="animate-scale-in">
-                  <AddFamilyMemberModal onAddMember={handleAddMember} />
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
+                    <div className="relative">
+                      <AddFamilyMemberModal onAddMember={handleAddMember} />
+                    </div>
+                  </div>
                 </div>
               </div>
               {familyMembers.length > 0 ? (
@@ -195,7 +187,7 @@ const MealPlanning = () => {
                   onDeleteMember={handleDeleteMember}
                 />
               ) : (
-                <div className="text-center py-4 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground">
                   {addMemberMutation.isPending ? 'Creando membro di default...' : 'Nessun membro trovato. Creando "Io"...'}
                 </div>
               )}
@@ -203,71 +195,85 @@ const MealPlanning = () => {
           </Card>
         </div>
 
+        {/* Carousel calendario con frecce funzionanti */}
         <div className="mb-8">
-          <div className="relative max-w-6xl mx-auto">
+          <div className="px-16">
             <Carousel
               opts={{ 
                 align: "start",
-                loop: false,
+                loop: true,
                 slidesToScroll: 1
               }}
               className="w-full"
             >
               <CarouselContent className="-ml-2">
                 {weekDates.map((date, index) => (
-                  <CarouselItem key={date.toISOString()} className="pl-2 basis-auto">
+                  <CarouselItem key={date.toISOString()} className="pl-2 basis-auto min-w-[160px]">
                     <Button
                       variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                      className={`min-w-[140px] h-[70px] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
+                      className={`w-full h-[80px] flex flex-col items-center justify-center gap-2 transition-all duration-500 transform hover:scale-105 ${
                         isSameDay(date, selectedDate) 
-                          ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white shadow-lg scale-105' 
-                          : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 hover:scale-102'
+                          ? 'bg-gradient-to-br from-red-600 via-orange-500 to-red-700 text-white shadow-xl shadow-red-500/25 scale-105 border-0' 
+                          : 'hover:bg-gradient-to-br hover:from-red-50 hover:to-orange-50 dark:hover:from-red-900/20 dark:hover:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600 hover:shadow-lg'
                       }`}
                       onClick={() => setSelectedDate(date)}
                     >
-                      <span className="text-sm font-medium">
+                      <span className={`text-sm font-semibold ${isSameDay(date, selectedDate) ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
                         {format(date, 'EEEE', { locale: it })}
                       </span>
-                      <span className="text-xs opacity-75">
+                      <span className={`text-xs ${isSameDay(date, selectedDate) ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'}`}>
                         {format(date, 'd MMMM', { locale: it })}
                       </span>
                     </Button>
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-md" />
-              <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 h-8 w-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-md" />
+              <CarouselPrevious className="h-12 w-12 -left-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300" />
+              <CarouselNext className="h-12 w-12 -right-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300" />
             </Carousel>
           </div>
         </div>
 
+        {/* Griglia piani pasto */}
         {selectedMembers.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-fade-in">
+          <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3 animate-fade-in">
             {selectedMembers.map(memberId => {
               const member = familyMembers.find(m => m.id === memberId);
               if (!member) return null;
               
               return (
-                <MealSchedule
-                  key={memberId}
-                  memberId={memberId}
-                  memberName={member.name}
-                  meals={getMealsForMember(memberId)}
-                  onAddMeal={handleAddMeal}
-                  date={selectedDate}
-                  recipes={recipes}
-                />
+                <div key={memberId} className="animate-scale-in">
+                  <MealSchedule
+                    memberId={memberId}
+                    memberName={member.name}
+                    meals={getMealsForMember(memberId)}
+                    onAddMeal={handleAddMeal}
+                    date={selectedDate}
+                    recipes={recipes}
+                  />
+                </div>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-8 animate-fade-in">
-            <p className="text-muted-foreground">
-              {familyMembers.length === 0 
-                ? 'Creando il primo membro della famiglia...' 
-                : 'Seleziona almeno un membro della famiglia per visualizzare i piani alimentari'
-              }
-            </p>
+          <div className="text-center py-12 animate-fade-in">
+            <div className="max-w-md mx-auto">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/20 dark:to-orange-900/20 flex items-center justify-center">
+                <ChefHat className="w-10 h-10 text-red-500" />
+              </div>
+              <p className="text-xl font-medium text-gray-600 dark:text-gray-300 mb-2">
+                {familyMembers.length === 0 
+                  ? 'Creando il primo membro della famiglia...' 
+                  : 'Seleziona almeno un membro della famiglia'
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {familyMembers.length === 0 
+                  ? 'Un momento per favore...' 
+                  : 'per visualizzare i piani alimentari personalizzati'
+                }
+              </p>
+            </div>
           </div>
         )}
       </div>
