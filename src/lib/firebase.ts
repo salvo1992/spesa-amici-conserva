@@ -67,6 +67,33 @@ export interface Recipe {
   created_at: string;
 }
 
+export interface FamilyMember {
+  id: string;
+  user_id: string;
+  name: string;
+  avatar?: string;
+  created_at: string;
+}
+
+export interface MealPlan {
+  id: string;
+  user_id: string;
+  member_id: string;
+  date: string;
+  meal_type: 'breakfast' | 'morningSnack' | 'lunch' | 'afternoonSnack' | 'dinner';
+  recipes: string[];
+  custom_meal: {
+    name: string;
+    description: string;
+    ingredients: Array<{
+      name: string;
+      quantity: string;
+      unit: string;
+    }>;
+  };
+  created_at: string;
+}
+
 export interface Review {
   id: string;
   user_id: string;
@@ -225,6 +252,85 @@ export const firebaseApi = {
   deleteRecipe: async (id: string) => {
     if (!db) throw new Error('Database non disponibile');
     const docRef = doc(db, 'recipes', id);
+    return await deleteDoc(docRef);
+  },
+
+  // Family Members
+  getFamilyMembers: async (): Promise<FamilyMember[]> => {
+    if (!db || !auth?.currentUser) return [];
+    const q = query(
+      collection(db, 'family_members'),
+      where('user_id', '==', auth.currentUser.uid),
+      orderBy('created_at', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember));
+  },
+
+  createFamilyMember: async (data: Omit<FamilyMember, 'id' | 'user_id' | 'created_at'>) => {
+    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    return await addDoc(collection(db, 'family_members'), {
+      ...data,
+      user_id: auth.currentUser.uid,
+      created_at: new Date().toISOString()
+    });
+  },
+
+  deleteFamilyMember: async (id: string) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'family_members', id);
+    // Prima elimina tutti i piani alimentari di questo membro
+    const mealPlansQuery = query(
+      collection(db, 'meal_plans'),
+      where('member_id', '==', id)
+    );
+    const mealPlansSnapshot = await getDocs(mealPlansQuery);
+    const deletePromises = mealPlansSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    // Poi elimina il membro
+    return await deleteDoc(docRef);
+  },
+
+  // Meal Plans
+  getMealPlans: async (date?: string): Promise<MealPlan[]> => {
+    if (!db || !auth?.currentUser) return [];
+    let q = query(
+      collection(db, 'meal_plans'),
+      where('user_id', '==', auth.currentUser.uid),
+      orderBy('created_at', 'desc')
+    );
+    
+    if (date) {
+      q = query(
+        collection(db, 'meal_plans'),
+        where('user_id', '==', auth.currentUser.uid),
+        where('date', '==', date),
+        orderBy('created_at', 'desc')
+      );
+    }
+    
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
+  },
+
+  createMealPlan: async (data: Omit<MealPlan, 'id' | 'user_id' | 'created_at'>) => {
+    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    return await addDoc(collection(db, 'meal_plans'), {
+      ...data,
+      user_id: auth.currentUser.uid,
+      created_at: new Date().toISOString()
+    });
+  },
+
+  updateMealPlan: async (id: string, data: Partial<MealPlan>) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'meal_plans', id);
+    return await updateDoc(docRef, data);
+  },
+
+  deleteMealPlan: async (id: string) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'meal_plans', id);
     return await deleteDoc(docRef);
   },
 
