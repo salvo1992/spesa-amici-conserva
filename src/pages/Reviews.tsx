@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ const Reviews = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [helpfulVotes, setHelpfulVotes] = useState<{[key: string]: {voted: boolean, count: number}}>({});
   const [newReview, setNewReview] = useState({
     product_name: '',
     rating: 5,
@@ -55,15 +57,15 @@ const Reviews = () => {
     }
   });
 
-  // Recensioni di default se non ce ne sono
+  // Recensioni di default con descrizioni migliorate
   const defaultReviews: Review[] = [
     {
       id: 'default-1',
       user_id: 'default',
-      product_name: 'Pasta alla Carbonara',
+      product_name: 'Pasta alla Carbonara Tradizionale',
       app_review: false,
       rating: 5,
-      comment: 'Assolutamente deliziosa! La migliore carbonara che abbia mai fatto seguendo questa ricetta.',
+      comment: 'Ricetta fantastica! Ho seguito esattamente le proporzioni: 400g di spaghetti, 200g di guanciale, 4 uova intere, pecorino romano grattugiato e pepe nero. Il segreto è amalgamare tutto a fuoco spento per evitare che le uova si rapprendano. Risultato cremoso e saporito come nei migliori ristoranti romani!',
       category: 'ricetta',
       helpful_count: 12,
       created_at: '2024-01-15T00:00:00.000Z'
@@ -71,10 +73,10 @@ const Reviews = () => {
     {
       id: 'default-2',
       user_id: 'default',
-      product_name: 'Tiramisù della Nonna',
+      product_name: 'Tiramisù della Nonna Perfetto',
       app_review: false,
       rating: 4,
-      comment: 'Ottima ricetta, molto facile da seguire. Il risultato è stato fantastico, proprio come quello della nonna!',
+      comment: 'Dolce meraviglioso! Ho utilizzato savoiardi di qualità, caffè espresso forte, mascarpone fresco, uova biologiche e cacao amaro. La chiave è lasciar riposare in frigo almeno 4 ore. Il contrasto tra la cremosità e l\'amarezza del caffè è sublime. Consiglio di non esagerare con lo zucchero.',
       category: 'ricetta',
       helpful_count: 8,
       created_at: '2024-01-10T00:00:00.000Z'
@@ -82,10 +84,10 @@ const Reviews = () => {
     {
       id: 'default-3',
       user_id: 'default',
-      product_name: 'App Food Manager',
+      product_name: 'Food Manager App',
       app_review: true,
       rating: 5,
-      comment: 'Applicazione fantastica per organizzare la spesa e le ricette. Molto intuitiva e completa!',
+      comment: 'App incredibilmente utile per organizzare la cucina! Le funzioni di pianificazione dei pasti, gestione della dispensa e lista spesa sincronizzata sono perfette. L\'interfaccia è intuitiva e le ricette integrate sono di ottima qualità. Ha rivoluzionato il mio modo di cucinare e fare la spesa.',
       category: 'app',
       helpful_count: 25,
       created_at: '2024-01-08T00:00:00.000Z'
@@ -126,26 +128,42 @@ const Reviews = () => {
   };
 
   const handleHelpful = (reviewId: string) => {
+    setHelpfulVotes(prev => {
+      const current = prev[reviewId] || { voted: false, count: 0 };
+      const newVoted = !current.voted;
+      const newCount = newVoted ? current.count + 1 : Math.max(0, current.count - 1);
+      
+      return {
+        ...prev,
+        [reviewId]: {
+          voted: newVoted,
+          count: newCount
+        }
+      };
+    });
+
     toast({
-      title: "Grazie!",
-      description: "Il tuo voto è stato registrato"
+      title: helpfulVotes[reviewId]?.voted ? "Voto rimosso" : "Grazie!",
+      description: helpfulVotes[reviewId]?.voted ? "Hai rimosso il tuo voto" : "Il tuo voto è stato registrato"
     });
   };
 
   const handleShare = (review: Review, platform: string) => {
-    const text = `"${review.comment}" - Recensione di ${review.product_name}`;
-    const url = window.location.href;
+    const appName = "Food Manager - Il Vikingo del Web";
+    const appUrl = window.location.origin;
+    const logoUrl = "/lovable-uploads/7c75a14f-99a4-4250-a4c1-00b33d7be67b.png";
+    const text = `🍽️ ${appName}\n\n"${review.comment}"\n\n⭐ Recensione di ${review.product_name}\n\n📱 Scarica l'app: ${appUrl}`;
     
     let shareUrl = '';
     switch (platform) {
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}&quote=${encodeURIComponent(text)}`;
         break;
       case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
         break;
       case 'instagram':
-        navigator.clipboard.writeText(`${text} ${url}`);
+        navigator.clipboard.writeText(text);
         toast({
           title: "Copiato!",
           description: "Testo copiato negli appunti per Instagram"
@@ -160,14 +178,14 @@ const Reviews = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
@@ -180,7 +198,7 @@ const Reviews = () => {
 
         <div className="grid gap-6">
           {allReviews.map((review) => (
-            <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/95 backdrop-blur-sm border-l-4 border-green-500">
+            <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-green-500">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -191,7 +209,7 @@ const Reviews = () => {
                       <CardTitle className="text-lg text-foreground flex items-center gap-2">
                         {review.product_name}
                         {review.app_review && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700">
+                          <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
                             App
                           </Badge>
                         )}
@@ -213,9 +231,9 @@ const Reviews = () => {
               </CardHeader>
               
               <CardContent className="pt-0">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 mb-4 border border-green-100">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 mb-4 border border-green-100 dark:border-green-800">
                   <MessageSquare className="h-4 w-4 text-green-600 mb-2" />
-                  <div className="text-gray-700 leading-relaxed">
+                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     {review.comment}
                   </div>
                 </div>
@@ -224,10 +242,16 @@ const Reviews = () => {
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={() => handleHelpful(review.id)}
-                      className="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-colors"
+                      className={`flex items-center space-x-2 transition-colors ${
+                        helpfulVotes[review.id]?.voted 
+                          ? 'text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg' 
+                          : 'text-gray-500 hover:text-green-600'
+                      }`}
                     >
-                      <ThumbsUp className="h-4 w-4" />
-                      <span className="text-sm">{review.helpful_count} utile</span>
+                      <ThumbsUp className={`h-4 w-4 ${helpfulVotes[review.id]?.voted ? 'fill-current' : ''}`} />
+                      <span className="text-sm">
+                        {(helpfulVotes[review.id]?.count || 0) + review.helpful_count} utile
+                      </span>
                     </button>
                     
                     <div className="flex items-center gap-2">
@@ -236,7 +260,7 @@ const Reviews = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleShare(review, 'facebook')}
-                        className="h-8 w-8 p-0 hover:bg-blue-100"
+                        className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
                       >
                         <Facebook className="h-4 w-4 text-blue-600" />
                       </Button>
@@ -244,7 +268,7 @@ const Reviews = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleShare(review, 'twitter')}
-                        className="h-8 w-8 p-0 hover:bg-sky-100"
+                        className="h-8 w-8 p-0 hover:bg-sky-100 dark:hover:bg-sky-900/20"
                       >
                         <Twitter className="h-4 w-4 text-sky-500" />
                       </Button>
@@ -252,7 +276,7 @@ const Reviews = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleShare(review, 'instagram')}
-                        className="h-8 w-8 p-0 hover:bg-pink-100"
+                        className="h-8 w-8 p-0 hover:bg-pink-100 dark:hover:bg-pink-900/20"
                       >
                         <Instagram className="h-4 w-4 text-pink-600" />
                       </Button>

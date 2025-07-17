@@ -71,9 +71,18 @@
   }
   
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans transition-colors duration-300;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  /* Dark mode specific styles */
+  .dark body {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #0f172a 100%);
+  }
+  
+  .dark .bg-gradient-to-br {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #0f172a 100%) !important;
   }
 }
 
@@ -132,6 +141,19 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: hsl(217.2 32.6% 17.5%);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(215 20.2% 65.1% / 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 20.2% 65.1% / 0.5);
 }
 
 /* Loading states */

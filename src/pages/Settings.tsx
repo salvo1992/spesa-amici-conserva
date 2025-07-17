@@ -2,469 +2,311 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, User, Bell, Shield, Palette, LogOut, Camera, Save, Key, ExternalLink, Cookie, FileText, Scale } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Bell, Moon, Sun, Globe, Shield, Trash2, Download, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { firebaseAuth, firebaseApi } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-const SettingsPage = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-
-  const [settings, setSettings] = useState({
-    notifications: true,
-    shareData: false,
-    darkMode: false,
-    autoSync: true,
-    publicProfile: false
+const Settings = () => {
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('darkMode') === 'true';
   });
-
-  const [profile, setProfile] = useState({
-    name: '',
-    email: '',
-    phone: ''
-  });
-
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  const [notifications, setNotifications] = useState(true);
+  const [language, setLanguage] = useState('it');
 
   useEffect(() => {
-    if (user) {
-      setProfile({
-        name: user.name || '',
-        email: user.email || '',
-        phone: ''
-      });
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#1f2937';
+      document.body.style.color = '#f9fafb';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '';
+      document.body.style.color = '';
     }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
 
-    // Carica impostazioni dal localStorage
-    const savedSettings = localStorage.getItem('app-settings');
-    if (savedSettings) {
+  const handleNotificationToggle = async (enabled: boolean) => {
+    setNotifications(enabled);
+    
+    if (enabled && 'Notification' in window) {
       try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
-        
-        // Applica dark mode se attivo
-        if (parsed.darkMode) {
-          document.documentElement.classList.add('dark');
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          new Notification('Food Manager', {
+            body: 'Notifiche attivate con successo!',
+            icon: '/favicon.ico'
+          });
+          toast({
+            title: "Notifiche attivate",
+            description: "Riceverai aggiornamenti importanti"
+          });
         } else {
-          document.documentElement.classList.remove('dark');
+          setNotifications(false);
+          toast({
+            title: "Notifiche negate",
+            description: "Abilita le notifiche nelle impostazioni del browser",
+            variant: "destructive"
+          });
         }
       } catch (error) {
-        console.error('Errore nel caricamento delle impostazioni:', error);
-      }
-    }
-  }, [user]);
-
-  const updateSetting = (key: string, value: boolean) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    
-    // Salva nel localStorage
-    localStorage.setItem('app-settings', JSON.stringify(newSettings));
-    
-    // Applica dark mode immediatamente
-    if (key === 'darkMode') {
-      if (value) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-
-    // Simula notifica reale per alcune impostazioni
-    if (key === 'notifications' && value) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            new Notification('Food Manager', {
-              body: 'Notifiche attivate con successo!',
-              icon: '/favicon.ico'
-            });
-          }
-        });
-      } else if (Notification.permission === 'granted') {
-        new Notification('Food Manager', {
-          body: 'Notifiche attivate!',
-          icon: '/favicon.ico'
+        setNotifications(false);
+        toast({
+          title: "Errore notifiche",
+          description: "Impossibile attivare le notifiche",
+          variant: "destructive"
         });
       }
+    } else if (!enabled) {
+      toast({
+        title: "Notifiche disattivate",
+        description: "Non riceverai più notifiche"
+      });
     }
+  };
+
+  const handleExportData = () => {
+    const data = {
+      settings: { darkMode, notifications, language },
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'food-manager-settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
     
     toast({
-      title: "Impostazione aggiornata",
-      description: `${getSettingLabel(key)} ${value ? 'attivato' : 'disattivato'}`,
+      title: "Dati esportati",
+      description: "Le tue impostazioni sono state scaricate"
     });
   };
 
-  const getSettingLabel = (key: string) => {
-    const labels: { [key: string]: string } = {
-      notifications: 'Notifiche',
-      shareData: 'Condivisione dati',
-      darkMode: 'Modalità scura',
-      autoSync: 'Sincronizzazione automatica',
-      publicProfile: 'Profilo pubblico'
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.settings) {
+          setDarkMode(data.settings.darkMode || false);
+          setNotifications(data.settings.notifications || false);
+          setLanguage(data.settings.language || 'it');
+          
+          toast({
+            title: "Dati importati",
+            description: "Le tue impostazioni sono state ripristinate"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Errore importazione",
+          description: "File non valido",
+          variant: "destructive"
+        });
+      }
     };
-    return labels[key] || key;
-  };
-
-  const updateProfile = (key: string, value: string) => {
-    setProfile(prev => ({ ...prev, [key]: value }));
-  };
-
-  const saveProfile = async () => {
-    setIsLoading(true);
-    try {
-      await firebaseApi.updateProfile(profile);
-      toast({
-        title: "Profilo aggiornato",
-        description: "Le modifiche sono state salvate con successo",
-      });
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile salvare le modifiche",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const changePassword = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Errore",
-        description: "Le password non coincidono",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      toast({
-        title: "Errore",
-        description: "La password deve essere di almeno 6 caratteri",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await firebaseApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      toast({
-        title: "Password cambiata",
-        description: "La password è stata aggiornata con successo",
-      });
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setShowPasswordDialog(false);
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile cambiare la password. Verifica la password attuale.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    reader.readAsText(file);
   };
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
-      {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-slate-600 animate-fade-in">
-        <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8 text-slate-600" />
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent">
-              Impostazioni
-            </h1>
-            <p className="text-muted-foreground mt-1">Personalizza la tua esperienza</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            Impostazioni
+          </h1>
+          <p className="text-muted-foreground">Personalizza la tua esperienza con Food Manager</p>
         </div>
-      </div>
 
-      {/* Profilo */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary" />
-            Profilo Utente
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="w-20 h-20">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-2xl">
-                  {profile.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <Button size="sm" className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0">
-                <Camera className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1 space-y-3">
+        {/* Preferenze Tema */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-2">
+              {darkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              Aspetto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="name">Nome Completo</Label>
-                <Input
-                  id="name"
-                  value={profile.name}
-                  onChange={(e) => updateProfile('name', e.target.value)}
-                />
+                <Label htmlFor="dark-mode" className="text-base font-medium">Modalità Scura</Label>
+                <p className="text-sm text-muted-foreground">Attiva il tema scuro per una migliore esperienza notturna</p>
+              </div>
+              <Switch
+                id="dark-mode"
+                checked={darkMode}
+                onCheckedChange={setDarkMode}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifiche */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifiche
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="notifications" className="text-base font-medium">Notifiche Push</Label>
+                <p className="text-sm text-muted-foreground">Ricevi notifiche per promemoria e aggiornamenti</p>
+              </div>
+              <Switch
+                id="notifications"
+                checked={notifications}
+                onCheckedChange={handleNotificationToggle}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lingua */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Lingua e Regione
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="language" className="text-base font-medium mb-2 block">Lingua dell'Interfaccia</Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="it">🇮🇹 Italiano</SelectItem>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                    <SelectItem value="es">🇪🇸 Español</SelectItem>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={profile.email}
-                onChange={(e) => updateProfile('email', e.target.value)}
-                disabled
-                className="bg-gray-100"
-              />
-              <p className="text-xs text-gray-500 mt-1">L'email non può essere modificata</p>
-            </div>
-            <div>
-              <Label htmlFor="phone">Telefono</Label>
-              <Input
-                id="phone"
-                value={profile.phone}
-                onChange={(e) => updateProfile('phone', e.target.value)}
-                placeholder="Inserisci il tuo numero"
-              />
-            </div>
-          </div>
-          
-          <Button onClick={saveProfile} disabled={isLoading} className="w-full">
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? 'Salvataggio...' : 'Salva Profilo'}
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Notifiche */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-accent" />
-            Notifiche
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Notifiche Push</Label>
-              <p className="text-sm text-muted-foreground">Ricevi notifiche per aggiornamenti importanti</p>
-            </div>
-            <Switch
-              checked={settings.notifications}
-              onCheckedChange={(checked) => updateSetting('notifications', checked)}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Sincronizzazione Automatica</Label>
-              <p className="text-sm text-muted-foreground">Sincronizza automaticamente i dati</p>
-            </div>
-            <Switch
-              checked={settings.autoSync}
-              onCheckedChange={(checked) => updateSetting('autoSync', checked)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Privacy */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-600" />
-            Privacy e Sicurezza
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Condividi Dati Anonimi</Label>
-              <p className="text-sm text-muted-foreground">Aiutaci a migliorare l'app</p>
-            </div>
-            <Switch
-              checked={settings.shareData}
-              onCheckedChange={(checked) => updateSetting('shareData', checked)}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Profilo Pubblico</Label>
-              <p className="text-sm text-muted-foreground">Rendi visibili le tue ricette agli altri</p>
-            </div>
-            <Switch
-              checked={settings.publicProfile}
-              onCheckedChange={(checked) => updateSetting('publicProfile', checked)}
-            />
-          </div>
-          
-          <div className="space-y-3 pt-4 border-t">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/privacy')}
-                className="flex items-center gap-2"
-              >
-                <Shield className="h-4 w-4" />
-                Privacy Policy
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/terms')}
-                className="flex items-center gap-2"
-              >
-                <Scale className="h-4 w-4" />
-                Termini di Servizio
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/cookies')}
-                className="flex items-center gap-2"
-              >
-                <Cookie className="h-4 w-4" />
-                Cookie Policy
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-          
-          <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <Key className="h-4 w-4 mr-2" />
-                Cambia Password
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cambia Password</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Password Attuale</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+        {/* Backup e Ripristino */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Backup e Ripristino
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <Button onClick={handleExportData} variant="outline" className="flex-1">
+                  <Download className="h-4 w-4 mr-2" />
+                  Esporta Dati
+                </Button>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportData}
+                    className="hidden"
+                    id="import-file"
                   />
-                </div>
-                <div>
-                  <Label>Nuova Password</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>Conferma Nuova Password</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={changePassword} disabled={isLoading} className="flex-1">
-                    {isLoading ? 'Cambiando...' : 'Cambia Password'}
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
-                    Annulla
+                  <Button asChild variant="outline" className="w-full">
+                    <label htmlFor="import-file" className="cursor-pointer flex items-center justify-center">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importa Dati
+                    </label>
                   </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
-
-      {/* Aspetto */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-purple-600" />
-            Aspetto
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Modalità Scura</Label>
-              <p className="text-sm text-muted-foreground">Utilizza tema scuro per l'interfaccia</p>
+              <p className="text-sm text-muted-foreground">
+                Esporta le tue impostazioni per conservarle o trasferirle su un altro dispositivo
+              </p>
             </div>
-            <Switch
-              checked={settings.darkMode}
-              onCheckedChange={(checked) => updateSetting('darkMode', checked)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Info App */}
-      <Card className="bg-gradient-to-r from-slate-100 to-gray-100 border-0 shadow-lg animate-fade-in">
-        <CardContent className="p-6 text-center">
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">Food Manager</h3>
-            <p className="text-slate-600 mb-2">
-              Sviluppato da <strong>Il Vikingo del Web</strong>
-            </p>
-            <p className="text-sm text-slate-500">
-              Versione 1.0.0 • © 2024 Il Vikingo del Web
-            </p>
-          </div>
-          
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <p className="text-amber-800 text-sm">
-              <strong>Disclaimer:</strong> Il Vikingo del Web non si assume responsabilità 
-              per l'uso che viene fatto di questa applicazione.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Privacy e Termini */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Privacy e Termini
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button asChild variant="outline">
+                  <Link to="/privacy">Informativa Privacy</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/terms">Termini di Servizio</Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Logout */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardContent className="p-6">
-          <Button variant="destructive" className="w-full" size="lg" onClick={logout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Esci dall'Account
-          </Button>
-        </CardContent>
-      </Card>
+        {/* Info App */}
+        <Card className="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader className="border-b dark:border-gray-700">
+            <CardTitle>Informazioni App</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Versione</span>
+                <Badge variant="secondary">1.0.0</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Ultimo Aggiornamento</span>
+                <span className="text-muted-foreground">17 Gennaio 2024</span>
+              </div>
+              <div className="border-t dark:border-gray-700 pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <img 
+                    src="/lovable-uploads/7c75a14f-99a4-4250-a4c1-00b33d7be67b.png" 
+                    alt="Il Vikingo del Web" 
+                    className="w-12 h-12 rounded-full"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-lg">Il Vikingo del Web</h3>
+                    <p className="text-sm text-muted-foreground">Sviluppatore dell'App</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Food Manager è sviluppato con passione da Il Vikingo del Web. 
+                  Questa app non è affiliata con nessun brand alimentare o ristorante. 
+                  Tutti i marchi e i nomi di prodotti menzionati appartengono ai rispettivi proprietari.
+                </p>
+                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                    <strong>Disclaimer:</strong> Le ricette e i consigli alimentari forniti sono solo a scopo informativo. 
+                    Consulta sempre un professionista per esigenze dietetiche specifiche.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
 
-export default SettingsPage;
+export default Settings;

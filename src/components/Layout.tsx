@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, Package, ChefHat, Users, Star, Settings } from 'lucide-react';
+import { Home, ShoppingCart, Package, ChefHat, Users, Star, Settings, Calendar } from 'lucide-react';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -11,15 +11,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: '/shopping-list', label: 'Lista Spesa', icon: ShoppingCart },
     { path: '/pantry', label: 'Dispensa', icon: Package },
     { path: '/recipes', label: 'Ricette', icon: ChefHat },
+    { path: '/meal-planning', label: 'Piano Alimentare', icon: Calendar },
     { path: '/shared', label: 'Condivise', icon: Users },
     { path: '/reviews', label: 'Recensioni', icon: Star },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-900 dark:to-slate-900">
       {/* Top Navigation */}
-      <nav className="bg-white shadow-lg border-b">
+      <nav className="bg-white dark:bg-gray-800 shadow-lg border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
@@ -42,7 +43,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary text-white'
-                          : 'text-gray-600 hover:text-primary hover:bg-gray-100'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -57,7 +58,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-t fixed bottom-0 left-0 right-0 z-50">
+      <div className="md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700 fixed bottom-0 left-0 right-0 z-50">
         <div className="flex justify-around py-2">
           {navItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -68,7 +69,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center py-2 px-3 rounded-lg ${
-                  isActive ? 'text-primary' : 'text-gray-600'
+                  isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
                 }`}
               >
                 <Icon className="h-5 w-5" />

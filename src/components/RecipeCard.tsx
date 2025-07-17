@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ChefHat, ShoppingCart, Eye, Share2, Heart } from 'lucide-react';
+import { Clock, Users, ChefHat, ShoppingCart, Eye, Share2 } from 'lucide-react';
 
 interface Recipe {
   id: string;
@@ -41,7 +41,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
             onClick={() => onShare(recipe)}
           >
-            <Heart className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
           </Button>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
