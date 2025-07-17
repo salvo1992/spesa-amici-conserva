@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
+import CookieBanner from "./components/CookieBanner";
 import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
 import Pantry from "./pages/Pantry";
@@ -14,6 +15,8 @@ import Shared from "./pages/Shared";
 import Reviews from "./pages/Reviews";
 import SettingsPage from "./pages/Settings";
 import MealPlanning from "./pages/MealPlanning";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import AuthForm from "./components/AuthForm";
 
@@ -38,19 +41,25 @@ const AppContent = () => {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/shopping-list" element={<ShoppingList />} />
-        <Route path="/pantry" element={<Pantry />} />
-        <Route path="/recipes" element={<Recipes />} />
-        <Route path="/shared" element={<Shared />} />
-        <Route path="/reviews" element={<Reviews />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/meal-planning" element={<MealPlanning />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Layout>
+    <>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/shopping-list" element={<ShoppingList />} />
+          <Route path="/pantry" element={<Pantry />} />
+          <Route path="/recipes" element={<Recipes />} />
+          <Route path="/shared" element={<Shared />} />
+          <Route path="/reviews" element={<Reviews />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/meal-planning" element={<MealPlanning />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/cookies" element={<Privacy />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Layout>
+      <CookieBanner />
+    </>
   );
 };
 

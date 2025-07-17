@@ -7,16 +7,17 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, User, Bell, Shield, Palette, Database, LogOut, Camera, Save, Download, Trash2, Key } from 'lucide-react';
+import { Settings, User, Bell, Shield, Palette, LogOut, Camera, Save, Key, ExternalLink, Cookie, FileText, Scale } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { firebaseAuth, firebaseApi } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const SettingsPage = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [settings, setSettings] = useState({
     notifications: true,
@@ -43,17 +44,79 @@ const SettingsPage = () => {
       setProfile({
         name: user.name || '',
         email: user.email || '',
-        phone: '' // Initialize phone as empty string since it's not in user object
+        phone: ''
       });
+    }
+
+    // Carica impostazioni dal localStorage
+    const savedSettings = localStorage.getItem('app-settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(parsed);
+        
+        // Applica dark mode se attivo
+        if (parsed.darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento delle impostazioni:', error);
+      }
     }
   }, [user]);
 
   const updateSetting = (key: string, value: boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    
+    // Salva nel localStorage
+    localStorage.setItem('app-settings', JSON.stringify(newSettings));
+    
+    // Applica dark mode immediatamente
+    if (key === 'darkMode') {
+      if (value) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    // Simula notifica reale per alcune impostazioni
+    if (key === 'notifications' && value) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            new Notification('Food Manager', {
+              body: 'Notifiche attivate con successo!',
+              icon: '/favicon.ico'
+            });
+          }
+        });
+      } else if (Notification.permission === 'granted') {
+        new Notification('Food Manager', {
+          body: 'Notifiche attivate!',
+          icon: '/favicon.ico'
+        });
+      }
+    }
+    
     toast({
       title: "Impostazione aggiornata",
-      description: `${key} ${value ? 'attivato' : 'disattivato'}`,
+      description: `${getSettingLabel(key)} ${value ? 'attivato' : 'disattivato'}`,
     });
+  };
+
+  const getSettingLabel = (key: string) => {
+    const labels: { [key: string]: string } = {
+      notifications: 'Notifiche',
+      shareData: 'Condivisione dati',
+      darkMode: 'Modalità scura',
+      autoSync: 'Sincronizzazione automatica',
+      publicProfile: 'Profilo pubblico'
+    };
+    return labels[key] || key;
   };
 
   const updateProfile = (key: string, value: string) => {
@@ -89,6 +152,15 @@ const SettingsPage = () => {
       return;
     }
 
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Errore",
+        description: "La password deve essere di almeno 6 caratteri",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await firebaseApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
@@ -101,79 +173,12 @@ const SettingsPage = () => {
     } catch (error) {
       toast({
         title: "Errore",
-        description: "Impossibile cambiare la password",
+        description: "Impossibile cambiare la password. Verifica la password attuale.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const exportData = async () => {
-    setIsLoading(true);
-    try {
-      const data = await firebaseApi.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `food-manager-data-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      
-      toast({
-        title: "Dati esportati",
-        description: "I tuoi dati sono stati scaricati con successo",
-      });
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile esportare i dati",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const deleteAllData = async () => {
-    setIsLoading(true);
-    try {
-      await firebaseApi.deleteAllData();
-      toast({
-        title: "Dati eliminati",
-        description: "Tutti i tuoi dati sono stati eliminati",
-      });
-      setShowDeleteDialog(false);
-      logout();
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare i dati",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createBackup = () => {
-    const backupData = {
-      profile,
-      settings,
-      timestamp: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    
-    toast({
-      title: "Backup creato",
-      description: "Backup locale salvato con successo",
-    });
   };
 
   return (
@@ -231,7 +236,10 @@ const SettingsPage = () => {
                 type="email"
                 value={profile.email}
                 onChange={(e) => updateProfile('email', e.target.value)}
+                disabled
+                className="bg-gray-100"
               />
+              <p className="text-xs text-gray-500 mt-1">L'email non può essere modificata</p>
             </div>
             <div>
               <Label htmlFor="phone">Telefono</Label>
@@ -239,6 +247,7 @@ const SettingsPage = () => {
                 id="phone"
                 value={profile.phone}
                 onChange={(e) => updateProfile('phone', e.target.value)}
+                placeholder="Inserisci il tuo numero"
               />
             </div>
           </div>
@@ -314,6 +323,43 @@ const SettingsPage = () => {
             />
           </div>
           
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/privacy')}
+                className="flex items-center gap-2"
+              >
+                <Shield className="h-4 w-4" />
+                Privacy Policy
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/terms')}
+                className="flex items-center gap-2"
+              >
+                <Scale className="h-4 w-4" />
+                Termini di Servizio
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/cookies')}
+                className="flex items-center gap-2"
+              >
+                <Cookie className="h-4 w-4" />
+                Cookie Policy
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          
           <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
@@ -386,50 +432,25 @@ const SettingsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Dati */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-blue-600" />
-            Gestione Dati
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button variant="outline" className="w-full" onClick={exportData} disabled={isLoading}>
-            <Download className="h-4 w-4 mr-2" />
-            {isLoading ? 'Esportando...' : 'Esporta Dati'}
-          </Button>
-          <Button variant="outline" className="w-full" onClick={createBackup}>
-            <Database className="h-4 w-4 mr-2" />
-            Backup Locale
-          </Button>
+      {/* Info App */}
+      <Card className="bg-gradient-to-r from-slate-100 to-gray-100 border-0 shadow-lg animate-fade-in">
+        <CardContent className="p-6 text-center">
+          <div className="mb-4">
+            <h3 className="text-xl font-semibold text-slate-800 mb-2">Food Manager</h3>
+            <p className="text-slate-600 mb-2">
+              Sviluppato da <strong>Il Vikingo del Web</strong>
+            </p>
+            <p className="text-sm text-slate-500">
+              Versione 1.0.0 • © 2024 Il Vikingo del Web
+            </p>
+          </div>
           
-          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" className="w-full">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Elimina Tutti i Dati
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Conferma Eliminazione</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Questa azione eliminerà permanentemente tutti i tuoi dati e non può essere annullata.
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="destructive" onClick={deleteAllData} disabled={isLoading} className="flex-1">
-                    {isLoading ? 'Eliminando...' : 'Elimina Tutto'}
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                    Annulla
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <p className="text-amber-800 text-sm">
+              <strong>Disclaimer:</strong> Il Vikingo del Web non si assume responsabilità 
+              per l'uso che viene fatto di questa applicazione.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
