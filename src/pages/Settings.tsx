@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,7 @@ const Settings = () => {
     }
   }, [darkMode]);
 
-  const handleLanguageChange = (newLanguage: string) => {
+  const handleLanguageChange = (newLanguage: 'it' | 'en' | 'es' | 'fr') => {
     setLanguage(newLanguage);
     toast({
       title: t('languageChanged'),

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { Layout } from '@/components/Layout';
+import Layout from '@/components/Layout';
 import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
 import ShoppingList from '@/pages/ShoppingList';

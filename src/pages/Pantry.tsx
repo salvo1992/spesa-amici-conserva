@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ const Pantry = () => {
   const { t } = useLanguage();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterQuantity, setFilterQuantity] = useState('all');
@@ -128,7 +129,7 @@ const Pantry = () => {
 
   const handleUpdateItem = () => {
     setPantryItems(prev => prev.map(item => 
-      item.id === editingItem.id ? { ...newItem, id: editingItem.id } : item
+      item.id === editingItem.id ? { ...newItem, id: editingItem.id, status: item.status } : item
     ));
     
     toast({
