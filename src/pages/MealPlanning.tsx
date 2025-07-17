@@ -23,14 +23,13 @@ import AddFamilyMemberModal from '@/components/AddFamilyMemberModal';
 const MealPlanning = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [defaultMemberCreated, setDefaultMemberCreated] = useState(false);
   const queryClient = useQueryClient();
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   // Queries
-  const { data: familyMembers = [], isLoading: loadingMembers, error: familyMembersError } = useQuery({
+  const { data: familyMembers = [], isLoading: loadingMembers } = useQuery({
     queryKey: ['family-members'],
     queryFn: firebaseApi.getFamilyMembers,
     retry: 3,
@@ -52,7 +51,6 @@ const MealPlanning = () => {
     onSuccess: (newMember) => {
       console.log('Successfully added member:', newMember);
       queryClient.invalidateQueries({ queryKey: ['family-members'] });
-      setDefaultMemberCreated(true);
       toast({
         title: "Membro aggiunto",
         description: "Il membro è stato aggiunto con successo",
@@ -60,7 +58,6 @@ const MealPlanning = () => {
     },
     onError: (error) => {
       console.error('Error adding member:', error);
-      // Se non siamo autenticati, creiamo comunque un membro mock locale
       if (error.message === 'Non autenticato') {
         const mockMember = {
           id: 'mock-io-' + Date.now(),
@@ -68,9 +65,7 @@ const MealPlanning = () => {
           user_id: 'mock-user',
           created_at: new Date().toISOString()
         };
-        // Aggiorna la cache con il membro mock
         queryClient.setQueryData(['family-members'], [mockMember]);
-        setDefaultMemberCreated(true);
         toast({
           title: "Membro aggiunto",
           description: "Il membro è stato aggiunto con successo (modalità demo)",
@@ -110,22 +105,11 @@ const MealPlanning = () => {
 
   // Create default member "Io" if no members exist
   useEffect(() => {
-    console.log('Effect triggered:', {
-      loadingMembers,
-      familyMembersLength: familyMembers.length,
-      defaultMemberCreated,
-      isPending: addMemberMutation.isPending,
-      error: familyMembersError
-    });
-
-    if (!loadingMembers && 
-        familyMembers.length === 0 && 
-        !defaultMemberCreated && 
-        !addMemberMutation.isPending) {
+    if (!loadingMembers && familyMembers.length === 0 && !addMemberMutation.isPending) {
       console.log('Creating default member "Io"');
       addMemberMutation.mutate({ name: 'Io' });
     }
-  }, [loadingMembers, familyMembers.length, defaultMemberCreated, addMemberMutation.isPending]);
+  }, [loadingMembers, familyMembers.length, addMemberMutation.isPending]);
 
   // Auto-select first member when available
   useEffect(() => {
@@ -179,13 +163,6 @@ const MealPlanning = () => {
     );
   }
 
-  console.log('Current state:', {
-    familyMembers: familyMembers.length,
-    selectedMembers,
-    defaultMemberCreated,
-    addMemberPending: addMemberMutation.isPending
-  });
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -226,21 +203,25 @@ const MealPlanning = () => {
           </Card>
         </div>
 
-        <div className="mb-8 max-w-full overflow-hidden">
-          <div className="px-12">
+        <div className="mb-8">
+          <div className="relative max-w-6xl mx-auto">
             <Carousel
-              opts={{ align: "start" }}
+              opts={{ 
+                align: "start",
+                loop: false,
+                slidesToScroll: 1
+              }}
               className="w-full"
             >
-              <CarouselContent className="-ml-4">
+              <CarouselContent className="-ml-2">
                 {weekDates.map((date, index) => (
-                  <CarouselItem key={date.toISOString()} className="pl-4 basis-auto">
+                  <CarouselItem key={date.toISOString()} className="pl-2 basis-auto">
                     <Button
                       variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                      className={`w-[120px] h-[64px] flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
+                      className={`min-w-[140px] h-[70px] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                         isSameDay(date, selectedDate) 
-                          ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white' 
-                          : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700'
+                          ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white shadow-lg scale-105' 
+                          : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 hover:scale-102'
                       }`}
                       onClick={() => setSelectedDate(date)}
                     >
@@ -254,8 +235,8 @@ const MealPlanning = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
-              <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
+              <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-md" />
+              <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 h-8 w-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-md" />
             </Carousel>
           </div>
         </div>
