@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -121,7 +120,8 @@ const Reviews = () => {
       app_review: newReview.category === 'app',
       rating: newReview.rating,
       comment: newReview.comment,
-      category: newReview.category
+      category: newReview.category,
+      helpful_count: 0
     });
   };
 
