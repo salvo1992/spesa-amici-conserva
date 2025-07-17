@@ -23,6 +23,7 @@ import AddFamilyMemberModal from '@/components/AddFamilyMemberModal';
 const MealPlanning = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [defaultMemberAdded, setDefaultMemberAdded] = useState(false);
   const queryClient = useQueryClient();
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
@@ -49,6 +50,7 @@ const MealPlanning = () => {
     mutationFn: firebaseApi.createFamilyMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['family-members'] });
+      setDefaultMemberAdded(true);
       toast({
         title: "Membro aggiunto",
         description: "Il membro è stato aggiunto con successo",
@@ -79,16 +81,13 @@ const MealPlanning = () => {
     },
   });
 
-  // Crea automaticamente il membro "Io" se non ci sono membri
+  // Crea automaticamente il membro "Io" se non ci sono membri (solo una volta)
   useEffect(() => {
-    console.log('Family members:', familyMembers);
-    console.log('Loading members:', loadingMembers);
-    
-    if (!loadingMembers && familyMembers.length === 0) {
+    if (!loadingMembers && familyMembers.length === 0 && !defaultMemberAdded && !addMemberMutation.isPending) {
       console.log('Adding default member "Io"');
       addMemberMutation.mutate({ name: 'Io' });
     }
-  }, [familyMembers.length, loadingMembers, addMemberMutation]);
+  }, [familyMembers.length, loadingMembers, defaultMemberAdded, addMemberMutation]);
 
   // Inizializza con il primo membro se disponibile
   useEffect(() => {
@@ -144,8 +143,8 @@ const MealPlanning = () => {
   console.log('Rendering with:', {
     familyMembers,
     selectedMembers,
-    mealPlans,
-    recipes
+    defaultMemberAdded,
+    addMemberPending: addMemberMutation.isPending
   });
 
   return (
@@ -179,14 +178,14 @@ const MealPlanning = () => {
                 />
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
-                  {loadingMembers ? 'Caricamento membri...' : 'Nessun membro trovato. Aggiungine uno!'}
+                  {loadingMembers || addMemberMutation.isPending ? 'Caricamento membri...' : 'Nessun membro trovato. Aggiungine uno!'}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="mb-8">
+        <div className="mb-8 px-12">
           <Carousel
             opts={{ align: "start" }}
             className="w-full"
@@ -213,8 +212,8 @@ const MealPlanning = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="text-red-600 border-red-200" />
-            <CarouselNext className="text-red-600 border-red-200" />
+            <CarouselPrevious className="text-red-600 border-red-200 -left-6" />
+            <CarouselNext className="text-red-600 border-red-200 -right-6" />
           </Carousel>
         </div>
 
