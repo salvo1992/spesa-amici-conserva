@@ -194,7 +194,7 @@ const Pantry = () => {
                   <SelectItem value="medium">Media (3-5)</SelectItem>
                   <SelectItem value="high">Alta (&gt;5)</SelectItem>
                 </SelectContent>
-              </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
