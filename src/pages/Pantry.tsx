@@ -1,25 +1,30 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle, Edit, ShoppingCart } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const Pantry = () => {
   const { t } = useLanguage();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterQuantity, setFilterQuantity] = useState('all');
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: 1,
     unit: 'pz',
     expiryDate: '',
-    category: 'Altro'
+    category: 'Altro',
+    type: 'Generico'
   });
 
   // Elementi di prova predefiniti
@@ -89,6 +94,18 @@ const Pantry = () => {
     }
   };
 
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setShowEditDialog(true);
+  };
+
+  const handleAddToShoppingList = (item: any) => {
+    toast({
+      title: "Aggiunto alla lista spesa",
+      description: `${item.name} è stato aggiunto alla lista della spesa`
+    });
+  };
+
   const handleAddItem = () => {
     if (!newItem.name.trim()) {
       toast({
@@ -105,12 +122,19 @@ const Pantry = () => {
     });
     
     setShowAddDialog(false);
-    setNewItem({ name: '', quantity: 1, unit: 'pz', expiryDate: '', category: 'Altro' });
+    setNewItem({ name: '', quantity: 1, unit: 'pz', expiryDate: '', category: 'Altro', type: 'Generico' });
   };
 
-  const filteredItems = defaultItems.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredItems = defaultItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || item.category === filterType;
+    const matchesQuantity = filterQuantity === 'all' || 
+      (filterQuantity === 'low' && item.quantity <= 2) ||
+      (filterQuantity === 'medium' && item.quantity > 2 && item.quantity <= 5) ||
+      (filterQuantity === 'high' && item.quantity > 5);
+    
+    return matchesSearch && matchesType && matchesQuantity;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
@@ -127,8 +151,8 @@ const Pantry = () => {
         {/* Search and Filter */}
         <Card className="mb-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-4">
-            <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-2 flex-1">
+            <div className="flex gap-4 items-center flex-wrap">
+              <div className="flex items-center gap-2 flex-1 min-w-64">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Cerca prodotti..."
@@ -137,10 +161,33 @@ const Pantry = () => {
                   className="border-0 bg-transparent"
                 />
               </div>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filtri
-              </Button>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Tipo prodotto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti i tipi</SelectItem>
+                    <SelectItem value="Pasta e Cereali">Pasta e Cereali</SelectItem>
+                    <SelectItem value="Conserve">Conserve</SelectItem>
+                    <SelectItem value="Latticini">Latticini</SelectItem>
+                    <SelectItem value="Condimenti">Condimenti</SelectItem>
+                    <SelectItem value="Farine e Lieviti">Farine e Lieviti</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Select value={filterQuantity} onValueChange={setFilterQuantity}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Quantità" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutte le quantità</SelectItem>
+                  <SelectItem value="low">Bassa (≤2)</SelectItem>
+                  <SelectItem value="medium">Media (3-5)</SelectItem>
+                  <SelectItem value="high">Alta (>5)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -187,6 +234,26 @@ const Pantry = () => {
                       </span>
                     </div>
                   </div>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleEditItem(item)}
+                      className="flex-1"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Modifica
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="flex-1 bg-orange-500 hover:bg-orange-600"
+                      onClick={() => handleAddToShoppingList(item)}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Lista Spesa
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -225,6 +292,23 @@ const Pantry = () => {
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
                   placeholder="Es. Pasta, Pomodori..."
                 />
+              </div>
+              
+              <div>
+                <Label htmlFor="item-type">Tipo Prodotto</Label>
+                <Select value={newItem.type} onValueChange={(value) => setNewItem({...newItem, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Generico">Generico</SelectItem>
+                    <SelectItem value="Fresco">Fresco</SelectItem>
+                    <SelectItem value="Surgelato">Surgelato</SelectItem>
+                    <SelectItem value="Conserva">Conserva</SelectItem>
+                    <SelectItem value="Bevanda">Bevanda</SelectItem>
+                    <SelectItem value="Snack">Snack</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -271,6 +355,73 @@ const Pantry = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Item Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Modifica Prodotto</DialogTitle>
+            </DialogHeader>
+            
+            {editingItem && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Nome Prodotto</Label>
+                  <Input
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Quantità</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editingItem.quantity}
+                      onChange={(e) => setEditingItem({...editingItem, quantity: parseInt(e.target.value)})}
+                    />
+                  </div>
+                  <div>
+                    <Label>Unità</Label>
+                    <Input
+                      value={editingItem.unit}
+                      onChange={(e) => setEditingItem({...editingItem, unit: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label>Data di Scadenza</Label>
+                  <Input
+                    type="date"
+                    value={editingItem.expiryDate}
+                    onChange={(e) => setEditingItem({...editingItem, expiryDate: e.target.value})}
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      toast({
+                        title: "Prodotto modificato",
+                        description: "Le modifiche sono state salvate"
+                      });
+                      setShowEditDialog(false);
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Salva Modifiche
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

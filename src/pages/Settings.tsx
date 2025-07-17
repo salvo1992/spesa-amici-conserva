@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -192,7 +191,7 @@ const Settings = () => {
                 {t('cookieSettings')}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-foreground">Cookie Essenziali</Label>
@@ -202,6 +201,13 @@ const Settings = () => {
                 </div>
                 <Switch checked={cookiesAccepted} onCheckedChange={setCookiesAccepted} />
               </div>
+              <Link 
+                to="/cookie" 
+                className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Informativa Cookie Completa
+              </Link>
             </CardContent>
           </Card>
 

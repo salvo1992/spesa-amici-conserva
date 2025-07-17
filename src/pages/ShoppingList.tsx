@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Plus, Trash2, Check, X, Share2 } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Check, X, Share2, Package, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -19,10 +19,12 @@ const ShoppingList = () => {
     name: '',
     quantity: 1,
     unit: 'pz',
-    category: 'Altro'
+    category: 'Altro',
+    type: 'Generico',
+    expiryDate: ''
   });
 
-  // Lista di prova predefinita
+  // Lista ordinata per tipo
   const defaultItems = [
     {
       id: 'shop-1',
@@ -30,7 +32,8 @@ const ShoppingList = () => {
       quantity: 2,
       unit: 'litri',
       category: 'Latticini',
-      priority: 'normal'
+      priority: 'normal' ,
+      type: 'Fresco'
     },
     {
       id: 'shop-2',
@@ -38,7 +41,8 @@ const ShoppingList = () => {
       quantity: 1,
       unit: 'pagnotta',
       category: 'Panetteria',
-      priority: 'high'
+      priority: 'high',
+      type: 'Panetteria'
     },
     {
       id: 'shop-3',
@@ -46,7 +50,8 @@ const ShoppingList = () => {
       quantity: 3,
       unit: 'confezioni',
       category: 'Latticini',
-      priority: 'normal'
+      priority: 'normal',
+      type: 'Fresco'
     },
     {
       id: 'shop-4',
@@ -54,7 +59,8 @@ const ShoppingList = () => {
       quantity: 2,
       unit: 'kg',
       category: 'Frutta e Verdura',
-      priority: 'high'
+      priority: 'high',
+      type: 'Fresco'
     },
     {
       id: 'shop-5',
@@ -62,9 +68,10 @@ const ShoppingList = () => {
       quantity: 1,
       unit: 'mazzo',
       category: 'Erbe Aromatiche',
-      priority: 'normal'
+      priority: 'normal',
+      type: 'Fresco'
     }
-  ];
+  ].sort((a, b) => a.type.localeCompare(b.type));
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -79,6 +86,29 @@ const ShoppingList = () => {
       ...prev,
       [itemId]: !prev[itemId]
     }));
+  };
+
+  const handleAddToPantry = (item: any) => {
+    toast({
+      title: "Aggiunto alla dispensa",
+      description: `${item.name} è stato aggiunto alla dispensa con scadenza automatica`
+    });
+  };
+
+  const handleWhatsAppShare = () => {
+    const itemsList = defaultItems
+      .filter(item => !checkedItems[item.id])
+      .map(item => `• ${item.name} - ${item.quantity} ${item.unit}`)
+      .join('\n');
+    
+    const message = `🛒 *Lista della Spesa - Food Manager*\n\n${itemsList}\n\n📱 Condiviso da Food Manager - Il Vikingo del Web`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    toast({
+      title: "Lista condivisa su WhatsApp",
+      description: "La lista è stata aperta su WhatsApp"
+    });
   };
 
   const handleAddItem = () => {
@@ -97,14 +127,7 @@ const ShoppingList = () => {
     });
     
     setShowAddDialog(false);
-    setNewItem({ name: '', quantity: 1, unit: 'pz', category: 'Altro' });
-  };
-
-  const handleShareList = () => {
-    toast({
-      title: "Lista condivisa!",
-      description: "Il link alla lista è stato copiato negli appunti"
-    });
+    setNewItem({ name: '', quantity: 1, unit: 'pz', category: 'Altro', type: 'Generico', expiryDate: '' });
   };
 
   const completedCount = Object.values(checkedItems).filter(Boolean).length;
@@ -124,9 +147,9 @@ const ShoppingList = () => {
             <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
               {completedCount}/{totalCount} completati
             </Badge>
-            <Button variant="outline" size="sm" onClick={handleShareList}>
-              <Share2 className="h-4 w-4 mr-2" />
-              Condividi Lista
+            <Button variant="outline" size="sm" onClick={handleWhatsAppShare}>
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Condividi su WhatsApp
             </Button>
           </div>
         </div>
@@ -171,9 +194,20 @@ const ShoppingList = () => {
                             <span className="text-sm font-medium">Completato</span>
                           </div>
                         ) : (
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-700 dark:text-green-300"
+                              onClick={() => handleAddToPantry(item)}
+                            >
+                              <Package className="h-4 w-4 mr-1" />
+                              Dispensa
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -216,6 +250,26 @@ const ShoppingList = () => {
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
                   placeholder="Es. Latte, Pane, Frutta..."
                 />
+              </div>
+              
+              <div>
+                <Label htmlFor="item-type">Tipo Prodotto</Label>
+                <Select value={newItem.type} onValueChange={(value) => setNewItem({...newItem, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fresco">Fresco</SelectItem>
+                    <SelectItem value="Surgelato">Surgelato</SelectItem>
+                    <SelectItem value="Conserva">Conserva</SelectItem>
+                    <SelectItem value="Bevanda">Bevanda</SelectItem>
+                    <SelectItem value="Panetteria">Panetteria</SelectItem>
+                    <SelectItem value="Latticini">Latticini</SelectItem>
+                    <SelectItem value="Carne">Carne</SelectItem>
+                    <SelectItem value="Pesce">Pesce</SelectItem>
+                    <SelectItem value="Generico">Generico</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
