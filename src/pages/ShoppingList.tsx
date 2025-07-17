@@ -6,30 +6,47 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Plus, Trash2, Check, X, Share2 } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Check, X, Share2, Package, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const ShoppingList = () => {
   const { t } = useLanguage();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showPantryDialog, setShowPantryDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
+  
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: 1,
     unit: 'pz',
-    category: 'Altro'
+    category: 'Altro',
+    type: 'Generico',
+    priority: 'normal'
   });
 
-  // Lista di prova predefinita
-  const defaultItems = [
+  const [pantryItem, setPantryItem] = useState({
+    expiryDate: '',
+    type: 'Generico'
+  });
+
+  const productTypes = [
+    'Latticini', 'Carne', 'Pesce', 'Frutta', 'Verdura', 'Cereali', 
+    'Conserve', 'Bevande', 'Condimenti', 'Dolci', 'Surgelati', 'Generico'
+  ];
+
+  // Lista aggiornata con tipo
+  const [shoppingItems, setShoppingItems] = useState([
     {
       id: 'shop-1',
       name: 'Latte Fresco',
       quantity: 2,
       unit: 'litri',
       category: 'Latticini',
+      type: 'Latticini',
       priority: 'normal'
     },
     {
@@ -38,6 +55,7 @@ const ShoppingList = () => {
       quantity: 1,
       unit: 'pagnotta',
       category: 'Panetteria',
+      type: 'Cereali',
       priority: 'high'
     },
     {
@@ -46,25 +64,19 @@ const ShoppingList = () => {
       quantity: 3,
       unit: 'confezioni',
       category: 'Latticini',
+      type: 'Latticini',
       priority: 'normal'
     },
     {
-      id: 'shop-4',
-      name: 'Pomodori San Marzano',
+      id: 'shop-test',
+      name: 'Pasta Integrale',
       quantity: 2,
       unit: 'kg',
-      category: 'Frutta e Verdura',
-      priority: 'high'
-    },
-    {
-      id: 'shop-5',
-      name: 'Basilico Fresco',
-      quantity: 1,
-      unit: 'mazzo',
-      category: 'Erbe Aromatiche',
+      category: 'Pasta e Cereali',
+      type: 'Cereali',
       priority: 'normal'
     }
-  ];
+  ]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -91,24 +103,65 @@ const ShoppingList = () => {
       return;
     }
 
+    const item = {
+      ...newItem,
+      id: `shop-${Date.now()}`
+    };
+
+    setShoppingItems(prev => [...prev, item]);
     toast({
       title: "Prodotto aggiunto",
       description: "Il prodotto è stato aggiunto alla lista della spesa"
     });
     
     setShowAddDialog(false);
-    setNewItem({ name: '', quantity: 1, unit: 'pz', category: 'Altro' });
+    setNewItem({ name: '', quantity: 1, unit: 'pz', category: 'Altro', type: 'Generico', priority: 'normal' });
+  };
+
+  const handleAddToPantry = (item) => {
+    setSelectedItem(item);
+    setPantryItem({ expiryDate: '', type: item.type });
+    setShowPantryDialog(true);
+  };
+
+  const confirmAddToPantry = () => {
+    toast({
+      title: "Aggiunto alla dispensa!",
+      description: `${selectedItem.name} è stato aggiunto alla dispensa con scadenza ${new Date(pantryItem.expiryDate).toLocaleDateString()}`
+    });
+    setShowPantryDialog(false);
+    setSelectedItem(null);
+  };
+
+  const handleShareWhatsApp = () => {
+    const appName = "Food Manager - Il Vikingo del Web";
+    const appUrl = window.location.origin;
+    const uncheckedItems = shoppingItems.filter(item => !checkedItems[item.id]);
+    const itemsList = uncheckedItems.map(item => `• ${item.name} (${item.quantity} ${item.unit})`).join('\n');
+    
+    const text = `🛒 *${appName}*\n\n📝 *Lista della Spesa:*\n\n${itemsList}\n\n📱 Gestisci le tue liste: ${appUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    
+    window.open(whatsappUrl, '_blank');
   };
 
   const handleShareList = () => {
+    const uncheckedItems = shoppingItems.filter(item => !checkedItems[item.id]);
+    const itemsList = uncheckedItems.map(item => `• ${item.name} (${item.quantity} ${item.unit})`).join('\n');
+    
+    const text = `🛒 Food Manager - Lista della Spesa\n\n${itemsList}\n\n📱 App: ${window.location.origin}`;
+    navigator.clipboard.writeText(text);
+    
     toast({
       title: "Lista condivisa!",
-      description: "Il link alla lista è stato copiato negli appunti"
+      description: "Il testo della lista è stato copiato negli appunti"
     });
   };
 
+  // Ordina per tipo
+  const sortedItems = [...shoppingItems].sort((a, b) => a.type.localeCompare(b.type));
   const completedCount = Object.values(checkedItems).filter(Boolean).length;
-  const totalCount = defaultItems.length;
+  const totalCount = shoppingItems.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
@@ -128,12 +181,16 @@ const ShoppingList = () => {
               <Share2 className="h-4 w-4 mr-2" />
               Condividi Lista
             </Button>
+            <Button variant="outline" size="sm" onClick={handleShareWhatsApp} className="text-green-600 hover:text-green-700">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              WhatsApp
+            </Button>
           </div>
         </div>
 
         {/* Shopping Items */}
         <div className="space-y-4 mb-8">
-          {defaultItems.map((item) => (
+          {sortedItems.map((item) => (
             <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg transition-all duration-300 border-l-4 border-blue-500 ${checkedItems[item.id] ? 'opacity-60' : 'hover:shadow-xl'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-4">
@@ -154,7 +211,7 @@ const ShoppingList = () => {
                             {item.quantity} {item.unit}
                           </span>
                           <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
-                            {item.category}
+                            {item.type}
                           </Badge>
                           {item.priority === 'high' && (
                             <Badge className={getPriorityColor(item.priority)}>
@@ -171,9 +228,20 @@ const ShoppingList = () => {
                             <span className="text-sm font-medium">Completato</span>
                           </div>
                         ) : (
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleAddToPantry(item)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Package className="h-4 w-4 mr-1" />
+                              Dispensa
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -218,6 +286,20 @@ const ShoppingList = () => {
                 />
               </div>
               
+              <div>
+                <Label htmlFor="item-type">Tipo Prodotto</Label>
+                <Select value={newItem.type} onValueChange={(value) => setNewItem({...newItem, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="item-quantity">Quantità</Label>
@@ -240,6 +322,20 @@ const ShoppingList = () => {
                 </div>
               </div>
               
+              <div>
+                <Label htmlFor="item-priority">Priorità</Label>
+                <Select value={newItem.priority} onValueChange={(value) => setNewItem({...newItem, priority: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normale</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="medium">Media</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="flex gap-2">
                 <Button
                   onClick={handleAddItem}
@@ -252,6 +348,63 @@ const ShoppingList = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add to Pantry Dialog */}
+        <Dialog open={showPantryDialog} onOpenChange={setShowPantryDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Aggiungi alla Dispensa</DialogTitle>
+            </DialogHeader>
+            
+            {selectedItem && (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <h4 className="font-medium text-foreground">{selectedItem.name}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedItem.quantity} {selectedItem.unit} - {selectedItem.type}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="pantry-expiry">Data di Scadenza</Label>
+                  <Input
+                    id="pantry-expiry"
+                    type="date"
+                    value={pantryItem.expiryDate}
+                    onChange={(e) => setPantryItem({...pantryItem, expiryDate: e.target.value})}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Tipo Prodotto</Label>
+                  <Select value={pantryItem.type} onValueChange={(value) => setPantryItem({...pantryItem, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {productTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={confirmAddToPantry}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    disabled={!pantryItem.expiryDate}
+                  >
+                    Aggiungi alla Dispensa
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPantryDialog(false)}>
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
