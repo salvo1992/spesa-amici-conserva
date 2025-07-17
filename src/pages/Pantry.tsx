@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const Pantry = () => {
       unit: 'kg',
       expiryDate: '2024-12-31',
       category: 'Pasta e Cereali',
+      type: 'Generico',
       status: 'fresh'
     },
     {
@@ -45,6 +47,7 @@ const Pantry = () => {
       unit: 'lattine',
       expiryDate: '2025-06-15',
       category: 'Conserve',
+      type: 'Conserva',
       status: 'fresh'
     },
     {
@@ -54,6 +57,7 @@ const Pantry = () => {
       unit: 'kg',
       expiryDate: '2024-02-28',
       category: 'Latticini',
+      type: 'Fresco',
       status: 'expiring'
     },
     {
@@ -63,6 +67,7 @@ const Pantry = () => {
       unit: 'bottiglia',
       expiryDate: '2025-03-10',
       category: 'Condimenti',
+      type: 'Generico',
       status: 'fresh'
     },
     {
@@ -72,6 +77,7 @@ const Pantry = () => {
       unit: 'kg',
       expiryDate: '2024-08-20',
       category: 'Farine e Lieviti',
+      type: 'Generico',
       status: 'fresh'
     }
   ];
@@ -127,7 +133,7 @@ const Pantry = () => {
 
   const filteredItems = defaultItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || item.category === filterType;
+    const matchesType = filterType === 'all' || item.type === filterType;
     const matchesQuantity = filterQuantity === 'all' || 
       (filterQuantity === 'low' && item.quantity <= 2) ||
       (filterQuantity === 'medium' && item.quantity > 2 && item.quantity <= 5) ||
@@ -169,11 +175,12 @@ const Pantry = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tutti i tipi</SelectItem>
-                    <SelectItem value="Pasta e Cereali">Pasta e Cereali</SelectItem>
-                    <SelectItem value="Conserve">Conserve</SelectItem>
-                    <SelectItem value="Latticini">Latticini</SelectItem>
-                    <SelectItem value="Condimenti">Condimenti</SelectItem>
-                    <SelectItem value="Farine e Lieviti">Farine e Lieviti</SelectItem>
+                    <SelectItem value="Generico">Generico</SelectItem>
+                    <SelectItem value="Fresco">Fresco</SelectItem>
+                    <SelectItem value="Surgelato">Surgelato</SelectItem>
+                    <SelectItem value="Conserva">Conserva</SelectItem>
+                    <SelectItem value="Bevanda">Bevanda</SelectItem>
+                    <SelectItem value="Snack">Snack</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -185,9 +192,9 @@ const Pantry = () => {
                   <SelectItem value="all">Tutte le quantità</SelectItem>
                   <SelectItem value="low">Bassa (≤2)</SelectItem>
                   <SelectItem value="medium">Media (3-5)</SelectItem>
-                  <SelectItem value="high">Alta (>5)</SelectItem>
+                  <SelectItem value="high">Alta (&gt;5)</SelectItem>
                 </SelectContent>
-              </Select>
+              </SelectContent>
             </div>
           </CardContent>
         </Card>
@@ -208,7 +215,7 @@ const Pantry = () => {
                       </CardTitle>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300">
-                          {item.category}
+                          {item.type}
                         </Badge>
                       </div>
                     </div>
@@ -373,6 +380,23 @@ const Pantry = () => {
                     value={editingItem.name}
                     onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
                   />
+                </div>
+                
+                <div>
+                  <Label>Tipo Prodotto</Label>
+                  <Select value={editingItem.type} onValueChange={(value) => setEditingItem({...editingItem, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Generico">Generico</SelectItem>
+                      <SelectItem value="Fresco">Fresco</SelectItem>
+                      <SelectItem value="Surgelato">Surgelato</SelectItem>
+                      <SelectItem value="Conserva">Conserva</SelectItem>
+                      <SelectItem value="Bevanda">Bevanda</SelectItem>
+                      <SelectItem value="Snack">Snack</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
