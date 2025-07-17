@@ -81,14 +81,19 @@ const MealPlanning = () => {
 
   // Crea automaticamente il membro "Io" se non ci sono membri
   useEffect(() => {
+    console.log('Family members:', familyMembers);
+    console.log('Loading members:', loadingMembers);
+    
     if (!loadingMembers && familyMembers.length === 0) {
+      console.log('Adding default member "Io"');
       addMemberMutation.mutate({ name: 'Io' });
     }
-  }, [familyMembers.length, loadingMembers]);
+  }, [familyMembers.length, loadingMembers, addMemberMutation]);
 
   // Inizializza con il primo membro se disponibile
   useEffect(() => {
     if (familyMembers.length > 0 && selectedMembers.length === 0) {
+      console.log('Setting first member as selected:', familyMembers[0]);
       setSelectedMembers([familyMembers[0].id]);
     }
   }, [familyMembers, selectedMembers.length]);
@@ -136,6 +141,13 @@ const MealPlanning = () => {
     );
   }
 
+  console.log('Rendering with:', {
+    familyMembers,
+    selectedMembers,
+    mealPlans,
+    recipes
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -158,12 +170,18 @@ const MealPlanning = () => {
                 </div>
                 <AddFamilyMemberModal onAddMember={handleAddMember} />
               </div>
-              <FamilyMemberSelect
-                members={familyMembers}
-                selectedMembers={selectedMembers}
-                onMemberToggle={handleMemberToggle}
-                onDeleteMember={handleDeleteMember}
-              />
+              {familyMembers.length > 0 ? (
+                <FamilyMemberSelect
+                  members={familyMembers}
+                  selectedMembers={selectedMembers}
+                  onMemberToggle={handleMemberToggle}
+                  onDeleteMember={handleDeleteMember}
+                />
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  {loadingMembers ? 'Caricamento membri...' : 'Nessun membro trovato. Aggiungine uno!'}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -200,24 +218,32 @@ const MealPlanning = () => {
           </Carousel>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {selectedMembers.map(memberId => {
-            const member = familyMembers.find(m => m.id === memberId);
-            if (!member) return null;
-            
-            return (
-              <MealSchedule
-                key={memberId}
-                memberId={memberId}
-                memberName={member.name}
-                meals={getMealsForMember(memberId)}
-                onAddMeal={handleAddMeal}
-                date={selectedDate}
-                recipes={recipes}
-              />
-            );
-          })}
-        </div>
+        {selectedMembers.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {selectedMembers.map(memberId => {
+              const member = familyMembers.find(m => m.id === memberId);
+              if (!member) return null;
+              
+              return (
+                <MealSchedule
+                  key={memberId}
+                  memberId={memberId}
+                  memberName={member.name}
+                  meals={getMealsForMember(memberId)}
+                  onAddMeal={handleAddMeal}
+                  date={selectedDate}
+                  recipes={recipes}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">
+              Seleziona almeno un membro della famiglia per visualizzare i piani alimentari
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
