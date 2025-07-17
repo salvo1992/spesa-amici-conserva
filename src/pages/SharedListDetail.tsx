@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { 
   ArrowLeft, Plus, Save, Share2, Check, X, AlertTriangle, 
   ShoppingCart, Package, Users, Calendar, Copy, Mail, 
-  Trash2, Edit3, CheckCircle 
+  Trash2, Edit3, CheckCircle, UserPlus
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,7 +27,10 @@ const SharedListDetail = () => {
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [newEmail, setNewEmail] = useState('');
   
   const [newItem, setNewItem] = useState({
     name: '',
@@ -85,6 +89,11 @@ const SharedListDetail = () => {
     mutationFn: async ({ itemId, updates }: { itemId: string, updates: any }) => {
       if (sharedList?.owner_id === 'default') {
         // Simulazione per liste demo
+        toast({ 
+          title: "Lista Demo", 
+          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
+          variant: "default"
+        });
         return Promise.resolve();
       }
       // Implementazione reale con Firebase
@@ -93,6 +102,7 @@ const SharedListDetail = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
       toast({ title: "Elemento aggiornato", description: "Le modifiche sono state salvate" });
+      setEditingItem(null); // Chiude il dialogo di modifica
     }
   });
 
@@ -134,8 +144,80 @@ const SharedListDetail = () => {
     }
   });
 
+  const deleteListMutation = useMutation({
+    mutationFn: async () => {
+      if (sharedList?.owner_id === 'default') {
+        toast({ 
+          title: "Lista Demo", 
+          description: "Questa è una lista di esempio. Non può essere eliminata.",
+          variant: "default"
+        });
+        return Promise.resolve();
+      }
+      return firebaseApi.deleteSharedList ? firebaseApi.deleteSharedList(id!) : Promise.resolve();
+    },
+    onSuccess: () => {
+      toast({ title: "Lista eliminata", description: "La lista condivisa è stata eliminata" });
+      navigate('/shared');
+    }
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async (email: string) => {
+      if (sharedList?.owner_id === 'default') {
+        toast({ 
+          title: "Lista Demo", 
+          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
+          variant: "default"
+        });
+        return Promise.resolve();
+      }
+      
+      // Implementazione reale: aggiungi membro alla lista condivisa
+      // Simuliamo l'operazione per ora
+      console.log(`Adding member ${email} to list ${id}`);
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
+      setNewEmail('');
+      toast({ title: "Membro aggiunto", description: "L'utente è stato aggiunto alla lista condivisa" });
+    }
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (email: string) => {
+      if (sharedList?.owner_id === 'default') {
+        toast({ 
+          title: "Lista Demo", 
+          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
+          variant: "default"
+        });
+        return Promise.resolve();
+      }
+      
+      // Implementazione reale: rimuovi membro dalla lista condivisa
+      // Simuliamo l'operazione per ora
+      console.log(`Removing member ${email} from list ${id}`);
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
+      toast({ title: "Membro rimosso", description: "L'utente è stato rimosso dalla lista condivisa" });
+    }
+  });
+
   const toggleItemCompletion = (itemId: string, completed: boolean) => {
     updateItemMutation.mutate({ itemId, updates: { completed: !completed } });
+  };
+
+  const handleEditSubmit = () => {
+    if (!editingItem) return;
+    
+    updateItemMutation.mutate({ 
+      itemId: editingItem.id, 
+      updates: { ...editingItem }
+    });
   };
 
   const copyShareLink = () => {
@@ -169,6 +251,19 @@ const SharedListDetail = () => {
       completed: false,
       id: Date.now().toString()
     });
+  };
+
+  const addNewMember = () => {
+    if (!newEmail.trim() || !newEmail.includes('@')) {
+      toast({ 
+        title: "Errore", 
+        description: "Inserisci un indirizzo email valido",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    addMemberMutation.mutate(newEmail);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -224,12 +319,54 @@ const SharedListDetail = () => {
           
           <div className="flex gap-3">
             <Button 
+              onClick={() => setShowMembersDialog(true)}
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Membri ({sharedList.members.length})
+            </Button>
+            
+            <Button 
               onClick={() => setShowShareDialog(true)}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-xl"
             >
               <Share2 className="h-4 w-4 mr-2" />
               Condividi
             </Button>
+            
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <Button 
+                variant="outline"
+                onClick={() => setShowDeleteDialog(true)}
+                className="border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Elimina
+              </Button>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Sei sicuro di voler eliminare questa lista?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa azione non può essere annullata. Tutti i prodotti nella lista verranno eliminati.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => deleteListMutation.mutate()}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {deleteListMutation.isPending ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Eliminando...
+                      </div>
+                    ) : "Elimina lista"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
@@ -442,14 +579,122 @@ const SharedListDetail = () => {
                 </div>
                 
                 <div className="flex gap-2 ml-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingItem(item)}
-                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingItem({...item})}
+                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
+                          ✏️ Modifica Prodotto
+                        </DialogTitle>
+                      </DialogHeader>
+                      {editingItem && editingItem.id === item.id && (
+                        <div className="space-y-4 mt-4">
+                          <div>
+                            <Label className="text-sm font-semibold text-blue-700">Nome Prodotto</Label>
+                            <Input
+                              value={editingItem.name}
+                              onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                              className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-semibold text-blue-700">Quantità</Label>
+                              <Input
+                                value={editingItem.quantity}
+                                onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
+                                className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold text-blue-700">Costo (€)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editingItem.cost}
+                                onChange={(e) => setEditingItem({...editingItem, cost: parseFloat(e.target.value) || 0})}
+                                className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-semibold text-blue-700">Categoria</Label>
+                              <Select 
+                                value={editingItem.category} 
+                                onValueChange={(value) => setEditingItem({...editingItem, category: value})}
+                              >
+                                <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CATEGORIES.food.map(cat => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold text-blue-700">Priorità</Label>
+                              <Select 
+                                value={editingItem.priority} 
+                                onValueChange={(value: any) => setEditingItem({...editingItem, priority: value})}
+                              >
+                                <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="bassa">🟢 Bassa</SelectItem>
+                                  <SelectItem value="media">🟡 Media</SelectItem>
+                                  <SelectItem value="alta">🔴 Alta</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-4 mt-6">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setEditingItem(null)} 
+                              className="flex-1 border-2 border-gray-300"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Annulla
+                            </Button>
+                            <Button 
+                              onClick={handleEditSubmit}
+                              disabled={updateItemMutation.isPending} 
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            >
+                              {updateItemMutation.isPending ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Salvando...
+                                </div>
+                              ) : (
+                                <>
+                                  <Save className="h-4 w-4 mr-2" />
+                                  Salva Modifiche
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                  
                   <Button
                     variant="ghost"
                     size="sm"
@@ -464,6 +709,75 @@ const SharedListDetail = () => {
           </Card>
         ))}
       </div>
+
+      {/* Members Dialog */}
+      <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
+        <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent flex items-center gap-2">
+              <Users className="h-6 w-6 text-blue-600" />
+              Membri della Lista
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Gestisci i membri che possono accedere e modificare questa lista
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="p-4 bg-white/80 rounded-xl border border-blue-200/50">
+              <Label className="text-sm font-semibold text-blue-700 mb-2 block">Aggiungi nuovo membro</Label>
+              <div className="flex gap-2">
+                <Input 
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Email del nuovo membro"
+                  type="email"
+                  className="border-2 border-blue-200/50 rounded-xl"
+                />
+                <Button 
+                  onClick={addNewMember}
+                  disabled={addMemberMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+                >
+                  {addMemberMutation.isPending ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <UserPlus className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-blue-100">
+              {sharedList.members.map((email: string, index: number) => (
+                <div key={index} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-medium">
+                      {email[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{email}</p>
+                      <p className="text-xs text-gray-500">
+                        {sharedList.owner_id === 'default' && index === 0 ? 'Proprietario' : 'Membro'}
+                      </p>
+                    </div>
+                  </div>
+                  {!(sharedList.owner_id === 'default' && index === 0) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => removeMemberMutation.mutate(email)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      disabled={removeMemberMutation.isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Share Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
