@@ -5,331 +5,275 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Package, Plus, Calendar, AlertTriangle, Search, Filter, Trash2, Edit } from 'lucide-react';
+import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firebaseAuth, firebaseApi, CATEGORIES, type PantryItem } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Pantry = () => {
-  const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: 1,
     unit: 'pz',
-    category: '',
-    expiry_date: '',
-    status: 'normale' as const
+    expiryDate: '',
+    category: 'Altro'
   });
 
-  const queryClient = useQueryClient();
-
-  const { data: pantryItems = [], isLoading } = useQuery({
-    queryKey: ['pantry'],
-    queryFn: firebaseApi.getPantryItems,
-    enabled: isAuthenticated
-  });
-
-  const createMutation = useMutation({
-    mutationFn: firebaseApi.createPantryItem,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pantry'] });
-      setShowAddDialog(false);
-      setNewItem({
-        name: '', quantity: 1, unit: 'pz', category: '', 
-        expiry_date: '', status: 'normale'
-      });
-      toast({ title: "Prodotto aggiunto", description: "Il prodotto è stato aggiunto alla dispensa" });
+  // Elementi di prova predefiniti
+  const defaultItems = [
+    {
+      id: 'pantry-1',
+      name: 'Pasta Spaghetti',
+      quantity: 2,
+      unit: 'kg',
+      expiryDate: '2024-12-31',
+      category: 'Pasta e Cereali',
+      status: 'fresh'
+    },
+    {
+      id: 'pantry-2',
+      name: 'Pomodori Pelati',
+      quantity: 4,
+      unit: 'lattine',
+      expiryDate: '2025-06-15',
+      category: 'Conserve',
+      status: 'fresh'
+    },
+    {
+      id: 'pantry-3',
+      name: 'Parmigiano Reggiano',
+      quantity: 1,
+      unit: 'kg',
+      expiryDate: '2024-02-28',
+      category: 'Latticini',
+      status: 'expiring'
+    },
+    {
+      id: 'pantry-4',
+      name: 'Olio Extra Vergine',
+      quantity: 1,
+      unit: 'bottiglia',
+      expiryDate: '2025-03-10',
+      category: 'Condimenti',
+      status: 'fresh'
+    },
+    {
+      id: 'pantry-5',
+      name: 'Farina 00',
+      quantity: 3,
+      unit: 'kg',
+      expiryDate: '2024-08-20',
+      category: 'Farine e Lieviti',
+      status: 'fresh'
     }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: firebaseApi.deletePantryItem,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pantry'] });
-      toast({ title: "Prodotto rimosso", description: "Il prodotto è stato rimosso dalla dispensa" });
-    }
-  });
-
-  const createItem = () => {
-    if (!newItem.name.trim()) return;
-    
-    createMutation.mutate({
-      name: newItem.name,
-      quantity: newItem.quantity,
-      unit: newItem.unit,
-      category: newItem.category || 'Altro',
-      expiry_date: newItem.expiry_date,
-      status: newItem.status
-    });
-  };
-
-  const filteredItems = pantryItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'abbondante': return 'bg-green-100 text-green-700 border-green-300';
-      case 'normale': return 'bg-blue-100 text-blue-700 border-blue-300';
-      case 'scarso': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'scaduto': return 'bg-red-100 text-red-700 border-red-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'fresh': return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300';
+      case 'expiring': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'expired': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
-  const getExpiryStatus = (expiryDate: string) => {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { text: 'Scaduto', color: 'text-red-600' };
-    if (diffDays <= 3) return { text: `Scade tra ${diffDays} giorni`, color: 'text-orange-600' };
-    if (diffDays <= 7) return { text: `Scade tra ${diffDays} giorni`, color: 'text-yellow-600' };
-    return { text: `Scade il ${expiry.toLocaleDateString()}`, color: 'text-green-600' };
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'fresh': return <CheckCircle className="h-4 w-4" />;
+      case 'expiring': return <AlertTriangle className="h-4 w-4" />;
+      case 'expired': return <AlertTriangle className="h-4 w-4" />;
+      default: return <Package className="h-4 w-4" />;
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const handleAddItem = () => {
+    if (!newItem.name.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci il nome del prodotto",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Prodotto aggiunto",
+      description: "Il prodotto è stato aggiunto alla dispensa"
+    });
+    
+    setShowAddDialog(false);
+    setNewItem({ name: '', quantity: 1, unit: 'pz', expiryDate: '', category: 'Altro' });
+  };
+
+  const filteredItems = defaultItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-600 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Package className="h-8 w-8 text-green-600" />
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent">
-                Dispensa
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {filteredItems.length} prodotti in dispensa
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+            {t('pantry')}
+          </h1>
+          <div className="text-muted-foreground">
+            Gestisci i tuoi prodotti in dispensa
           </div>
-          
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
-                <Plus className="h-4 w-4 mr-2" />
-                Aggiungi Prodotto
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Aggiungi Nuovo Prodotto</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Nome Prodotto</Label>
-                  <Input
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                    placeholder="Es. Pasta, Latte, etc."
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Quantità</Label>
-                    <Input
-                      type="number"
-                      value={newItem.quantity}
-                      onChange={(e) => setNewItem({...newItem, quantity: parseFloat(e.target.value) || 1})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Unità</Label>
-                    <Select value={newItem.unit} onValueChange={(value) => setNewItem({...newItem, unit: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pz">Pezzi</SelectItem>
-                        <SelectItem value="kg">Kg</SelectItem>
-                        <SelectItem value="g">Grammi</SelectItem>
-                        <SelectItem value="l">Litri</SelectItem>
-                        <SelectItem value="ml">Millilitri</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Categoria</Label>
-                  <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.food.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Data Scadenza</Label>
-                  <Input
-                    type="date"
-                    value={newItem.expiry_date}
-                    onChange={(e) => setNewItem({...newItem, expiry_date: e.target.value})}
-                  />
-                </div>
-
-                <div>
-                  <Label>Stato</Label>
-                  <Select value={newItem.status} onValueChange={(value: any) => setNewItem({...newItem, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="abbondante">Abbondante</SelectItem>
-                      <SelectItem value="normale">Normale</SelectItem>
-                      <SelectItem value="scarso">Scarso</SelectItem>
-                      <SelectItem value="scaduto">Scaduto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button onClick={createItem} disabled={createMutation.isPending} className="w-full">
-                  {createMutation.isPending ? 'Salvando...' : 'Salva Prodotto'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
-      </div>
 
-      {/* Search and Filters */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 flex-1 min-w-64">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca prodotti..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-0 bg-transparent"
-              />
+        {/* Search and Filter */}
+        <Card className="mb-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2 flex-1">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca prodotti..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border-0 bg-transparent"
+                />
+              </div>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtri
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Tutte le categorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte le categorie</SelectItem>
-                  {CATEGORIES.food.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  <SelectItem value="abbondante">Abbondante</SelectItem>
-                  <SelectItem value="normale">Normale</SelectItem>
-                  <SelectItem value="scarso">Scarso</SelectItem>
-                  <SelectItem value="scaduto">Scaduto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Items Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => {
-          const expiryStatus = getExpiryStatus(item.expiry_date);
-          return (
-            <Card 
-              key={item.id} 
-              className="bg-white/80 backdrop-blur-sm border-0 shadow-lg animate-fade-in transition-all duration-300 hover:shadow-xl hover:scale-105"
-            >
+        {/* Items Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {filteredItems.map((item) => (
+            <Card key={item.id} className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-green-500">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg mb-2">{item.name}</CardTitle>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-500 hover:text-red-700"
-                    onClick={() => deleteMutation.mutate(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex gap-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                      <Package className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg text-foreground">
+                        {item.name}
+                      </CardTitle>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                          {item.category}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
                   <Badge className={getStatusColor(item.status)}>
-                    {item.status}
+                    {getStatusIcon(item.status)}
                   </Badge>
-                  <Badge variant="secondary">{item.category}</Badge>
                 </div>
               </CardHeader>
               
               <CardContent className="pt-0">
                 <div className="space-y-3">
-                  <div className="text-lg font-semibold">
-                    {item.quantity} {item.unit}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Quantità:</span>
+                    <span className="font-medium text-foreground">{item.quantity} {item.unit}</span>
                   </div>
-                  
-                  <div className={`text-sm flex items-center gap-2 ${expiryStatus.color}`}>
-                    <Calendar className="h-4 w-4" />
-                    <span>{expiryStatus.text}</span>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Modifica
-                    </Button>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Scadenza:</span>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-foreground">
+                        {new Date(item.expiryDate).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
+        </div>
+
+        {/* Add Item Dialog */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Card className="card-hover shadow-lg border-0 bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer">
+              <CardContent className="p-6 text-center">
+                <Plus className="h-8 w-8 mx-auto mb-3" />
+                <h3 className="text-xl font-semibold mb-2">Aggiungi Prodotto</h3>
+                <div className="text-green-100 mb-4">
+                  Aggiungi un nuovo prodotto alla tua dispensa
+                </div>
+                <div className="inline-flex items-center gap-2 bg-white text-green-600 px-6 py-2 rounded-lg font-medium hover:bg-green-50 transition-colors">
+                  <Plus className="h-4 w-4" />
+                  Aggiungi Prodotto
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Aggiungi Nuovo Prodotto</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="item-name">Nome Prodotto</Label>
+                <Input
+                  id="item-name"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                  placeholder="Es. Pasta, Pomodori..."
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="item-quantity">Quantità</Label>
+                  <Input
+                    id="item-quantity"
+                    type="number"
+                    min="1"
+                    value={newItem.quantity}
+                    onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="item-unit">Unità</Label>
+                  <Input
+                    id="item-unit"
+                    value={newItem.unit}
+                    onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
+                    placeholder="kg, pz, lt..."
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="item-expiry">Data di Scadenza</Label>
+                <Input
+                  id="item-expiry"
+                  type="date"
+                  value={newItem.expiryDate}
+                  onChange={(e) => setNewItem({...newItem, expiryDate: e.target.value})}
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleAddItem}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  Aggiungi Prodotto
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                  Annulla
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-      
-      {filteredItems.length === 0 && (
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-8 text-center">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nessun prodotto trovato</h3>
-            <p className="text-muted-foreground mb-4">
-              Aggiungi i tuoi primi prodotti alla dispensa!
-            </p>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Aggiungi Prodotto
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
