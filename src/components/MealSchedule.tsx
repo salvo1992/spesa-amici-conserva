@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, ChefHat } from 'lucide-react';
+import AddMealModal from './AddMealModal';
 
 interface Meal {
   id: string;
@@ -28,6 +29,8 @@ const mealTypes = [
 ];
 
 const MealSchedule = ({ memberId, memberName, meals, onAddMeal, date }: MealScheduleProps) => {
+  const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
+
   return (
     <Card className="bg-card shadow-lg border-0">
       <CardHeader className="pb-2">
@@ -56,7 +59,10 @@ const MealSchedule = ({ memberId, memberName, meals, onAddMeal, date }: MealSche
                 <Button
                   variant="outline"
                   className="flex-1 border-dashed"
-                  onClick={() => onAddMeal(memberId, type.id)}
+                  onClick={() => {
+                    setSelectedMealType(type.id);
+                    onAddMeal(memberId, type.id);
+                  }}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Aggiungi {type.label}
@@ -65,6 +71,15 @@ const MealSchedule = ({ memberId, memberName, meals, onAddMeal, date }: MealSche
             </div>
           );
         })}
+        <AddMealModal
+          isOpen={selectedMealType !== null}
+          onClose={() => setSelectedMealType(null)}
+          mealType={selectedMealType || ''}
+          onAddMeal={(meal) => {
+            console.log('Meal added:', meal);
+            // Logica per salvare il pasto
+          }}
+        />
       </CardContent>
     </Card>
   );
