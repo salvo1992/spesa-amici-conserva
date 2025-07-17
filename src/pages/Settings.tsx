@@ -4,259 +4,283 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Moon, Sun, Globe, Bell, Shield, Cookie, Info, Calendar } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { 
+  Settings as SettingsIcon, 
+  Moon, 
+  Sun, 
+  Bell, 
+  Globe, 
+  Shield, 
+  FileText, 
+  Cookie,
+  Info,
+  Calendar
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 const Settings = () => {
   const { language, setLanguage, t } = useLanguage();
-  const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true' || 
-             (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-    return false;
-  });
-
+  const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
-  const [cookiesAccepted, setCookiesAccepted] = useState(() => {
-    return localStorage.getItem('cookiesAccepted') === 'true';
-  });
+  const [cookiesAccepted, setCookiesAccepted] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('darkMode', String(darkMode));
-      if (darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+    const isDark = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
     }
-  }, [darkMode]);
+  }, []);
 
-  const handleLanguageChange = (newLanguage: 'it' | 'en' | 'es' | 'fr') => {
-    setLanguage(newLanguage);
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
     toast({
-      title: t('languageChanged'),
-      description: `${t('languageSetTo')} ${newLanguage === 'it' ? 'Italiano' : newLanguage === 'en' ? 'English' : newLanguage === 'es' ? 'Español' : 'Français'}`
+      title: newDarkMode ? "Modalità scura attivata" : "Modalità chiara attivata",
+      description: "Le impostazioni sono state salvate"
     });
   };
 
-  const handleCookieSettings = () => {
-    navigate('/privacy');
+  const toggleNotifications = async () => {
+    if (!notifications) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          setNotifications(true);
+          toast({
+            title: "Notifiche attivate",
+            description: "Riceverai notifiche dal Food Manager"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Errore",
+          description: "Impossibile attivare le notifiche",
+          variant: "destructive"
+        });
+      }
+    } else {
+      setNotifications(false);
+      toast({
+        title: "Notifiche disattivate",
+        description: "Non riceverai più notifiche"
+      });
+    }
   };
 
-  const handleDarkModeToggle = () => {
-    setDarkMode(!darkMode);
-  };
-
-  const handleNotificationsToggle = () => {
-    setNotifications(!notifications);
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage as 'it' | 'en' | 'es' | 'fr');
     toast({
-      title: notifications ? t('notificationsDisabled') : t('notificationsEnabled'),
-      description: notifications ? t('youWontReceive') : t('youWillReceive')
+      title: "Lingua cambiata",
+      description: `Lingua impostata su ${newLanguage === 'it' ? 'Italiano' : newLanguage === 'en' ? 'English' : newLanguage === 'es' ? 'Español' : 'Français'}`
     });
   };
 
-  const handleAcceptCookies = () => {
-    setCookiesAccepted(true);
-    localStorage.setItem('cookiesAccepted', 'true');
-    toast({
-      title: t('cookiesAccepted'),
-      description: t('thankYouForAccepting')
-    });
-  };
-
-  const handleRejectCookies = () => {
-    setCookiesAccepted(false);
-    localStorage.setItem('cookiesAccepted', 'false');
-    toast({
-      title: t('cookiesRejected'),
-      description: t('someFeaturesMayBeLimited')
-    });
-  };
+  const today = new Date().toLocaleDateString('it-IT');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl p-6 shadow-lg border-l-4 border-blue-500 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-              <SettingsIcon className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-                {t('settings')}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <img 
-                  src="/lovable-uploads/7c75a14f-99a4-4250-a4c1-00b33d7be67b.png" 
-                  alt="Il Vikingo del Web" 
-                  className="w-6 h-6 rounded-full"
-                />
-                <p className="text-muted-foreground">Il Vikingo del Web - Food Manager</p>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            {t('settings')}
+          </h1>
+          <p className="text-muted-foreground">
+            Personalizza la tua esperienza Food Manager
+          </p>
         </div>
 
-        {/* Language Settings */}
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Globe className="h-5 w-5 text-blue-600" />
-              {t('languageSettings')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-foreground">{t('selectLanguage')}</div>
-                <div className="text-sm text-muted-foreground">
-                  {t('chooseAppLanguage')}
+        <div className="grid gap-6">
+          {/* Aspetto */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                  {darkMode ? <Moon className="h-5 w-5 text-white" /> : <Sun className="h-5 w-5 text-white" />}
                 </div>
+                Aspetto
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">{t('darkMode')}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Attiva il tema scuro per ridurre l'affaticamento degli occhi
+                  </p>
+                </div>
+                <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
               </div>
-              <Select value={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('selectLanguage')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="it">Italiano</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                  <SelectItem value="fr">Français</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Appearance Settings */}
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              {darkMode ? <Moon className="h-5 w-5 text-yellow-500" /> : <Sun className="h-5 w-5 text-yellow-500" />}
-              {t('appearanceSettings')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-foreground">{t('darkMode')}</div>
-                <div className="text-sm text-muted-foreground">
-                  {t('toggleDarkMode')}
+          {/* Lingua */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-green-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                  <Globe className="h-5 w-5 text-white" />
                 </div>
+                {t('language')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">Seleziona Lingua</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Cambia la lingua dell'interfaccia
+                  </p>
+                </div>
+                <Select value={language} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="it">🇮🇹 Italiano</SelectItem>
+                    <SelectItem value="en">🇺🇸 English</SelectItem>
+                    <SelectItem value="es">🇪🇸 Español</SelectItem>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Switch checked={darkMode} onCheckedChange={handleDarkModeToggle} />
-            </div>
-            <Separator />
-            <div className="text-center">
-              <Badge variant="outline">
-                {darkMode ? t('usingDarkMode') : t('usingLightMode')}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Notifications */}
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Bell className="h-5 w-5 text-orange-500" />
-              {t('notificationSettings')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-foreground">{t('enableNotifications')}</div>
-                <div className="text-sm text-muted-foreground">
-                  {t('receiveUpdates')}
+          {/* Notifiche */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-orange-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-white" />
                 </div>
+                {t('notifications')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">Notifiche Push</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ricevi notifiche per promemoria e aggiornamenti
+                  </p>
+                </div>
+                <Switch checked={notifications} onCheckedChange={toggleNotifications} />
               </div>
-              <Switch checked={notifications} onCheckedChange={handleNotificationsToggle} />
-            </div>
-            <Separator />
-            <div className="text-center">
-              <Badge variant="outline">
-                {notifications ? t('notificationsEnabled') : t('notificationsDisabled')}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Privacy & Cookies */}
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Shield className="h-5 w-5 text-green-600" />
-              Privacy & Cookie
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-foreground">Cookie Accettati</div>
-                <div className="text-sm text-muted-foreground">
-                  Gestisci le tue preferenze sui cookie
+          {/* Cookie */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-purple-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Cookie className="h-5 w-5 text-white" />
                 </div>
+                {t('cookieSettings')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">Cookie Essenziali</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Necessari per il funzionamento dell'app
+                  </p>
+                </div>
+                <Switch checked={cookiesAccepted} onCheckedChange={setCookiesAccepted} />
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={cookiesAccepted ? "default" : "secondary"}>
-                  {cookiesAccepted ? "Accettati" : "Non Accettati"}
+            </CardContent>
+          </Card>
+
+          {/* Informazioni App */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-teal-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center">
+                  <Info className="h-5 w-5 text-white" />
+                </div>
+                Informazioni App
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-foreground">{t('version')}</Label>
+                <Badge variant="secondary" className="bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300">
+                  v2.1.0
                 </Badge>
-                <Button variant="outline" size="sm" onClick={handleCookieSettings}>
-                  <Cookie className="h-4 w-4 mr-2" />
-                  Gestisci Cookie
-                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex items-center justify-between">
+                <Label className="text-foreground">{t('lastUpdate')}</Label>
+                <Badge variant="outline" className="border-teal-300 text-teal-700 dark:text-teal-300">
+                  {today}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* App Info */}
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Info className="h-5 w-5 text-blue-600" />
-              Informazioni App
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Versione</div>
-                <div className="font-medium text-foreground">v2.1.0</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Ultimo Aggiornamento</div>
-                <div className="font-medium text-foreground flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {new Date().toLocaleDateString('it-IT')}
+          {/* Links Legali */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-gray-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-white" />
                 </div>
-              </div>
-            </div>
-            <Separator />
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
+                Privacy e Sicurezza
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Link 
+                to="/privacy" 
+                className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Privacy Policy
+              </Link>
+              <Link 
+                to="/terms" 
+                className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Termini di Servizio
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Il Vikingo del Web */}
+          <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
                 <img 
                   src="/lovable-uploads/7c75a14f-99a4-4250-a4c1-00b33d7be67b.png" 
                   alt="Il Vikingo del Web" 
-                  className="w-8 h-8 rounded-full"
+                  className="w-12 h-12 rounded-full"
                 />
-                <span className="font-bold text-blue-600 dark:text-blue-400">Il Vikingo del Web</span>
+                <h3 className="text-xl font-bold">Il Vikingo del Web</h3>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Food Manager - La tua app per gestire cibo e ricette
+              <p className="text-orange-100 mb-4">
+                Food Manager è sviluppato da Il Vikingo del Web, 
+                specialista in soluzioni digitali innovative per la gestione domestica.
               </p>
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-orange-200">
+                © 2024 Il Vikingo del Web. Tutti i diritti riservati.
+                Questa applicazione è fornita "così com'è" senza garanzie di alcun tipo.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
