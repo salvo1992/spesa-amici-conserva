@@ -23,7 +23,7 @@ import AddFamilyMemberModal from '@/components/AddFamilyMemberModal';
 const MealPlanning = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [defaultMemberAdded, setDefaultMemberAdded] = useState(false);
+  const [defaultMemberCreated, setDefaultMemberCreated] = useState(false);
   const queryClient = useQueryClient();
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
@@ -52,7 +52,7 @@ const MealPlanning = () => {
     onSuccess: (newMember) => {
       console.log('Successfully added member:', newMember);
       queryClient.invalidateQueries({ queryKey: ['family-members'] });
-      setDefaultMemberAdded(true);
+      setDefaultMemberCreated(true);
       toast({
         title: "Membro aggiunto",
         description: "Il membro è stato aggiunto con successo",
@@ -60,11 +60,28 @@ const MealPlanning = () => {
     },
     onError: (error) => {
       console.error('Error adding member:', error);
-      toast({
-        title: "Errore",
-        description: "Errore nell'aggiungere il membro",
-        variant: "destructive",
-      });
+      // Se non siamo autenticati, creiamo comunque un membro mock locale
+      if (error.message === 'Non autenticato') {
+        const mockMember = {
+          id: 'mock-io-' + Date.now(),
+          name: 'Io',
+          user_id: 'mock-user',
+          created_at: new Date().toISOString()
+        };
+        // Aggiorna la cache con il membro mock
+        queryClient.setQueryData(['family-members'], [mockMember]);
+        setDefaultMemberCreated(true);
+        toast({
+          title: "Membro aggiunto",
+          description: "Il membro è stato aggiunto con successo (modalità demo)",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: "Errore nell'aggiungere il membro",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -91,21 +108,24 @@ const MealPlanning = () => {
     },
   });
 
-  // Auto-add default member "Io" if no members exist
+  // Create default member "Io" if no members exist
   useEffect(() => {
     console.log('Effect triggered:', {
       loadingMembers,
       familyMembersLength: familyMembers.length,
-      defaultMemberAdded,
+      defaultMemberCreated,
       isPending: addMemberMutation.isPending,
       error: familyMembersError
     });
 
-    if (!loadingMembers && !defaultMemberAdded && familyMembers.length === 0 && !addMemberMutation.isPending) {
-      console.log('Adding default member "Io"');
+    if (!loadingMembers && 
+        familyMembers.length === 0 && 
+        !defaultMemberCreated && 
+        !addMemberMutation.isPending) {
+      console.log('Creating default member "Io"');
       addMemberMutation.mutate({ name: 'Io' });
     }
-  }, [loadingMembers, familyMembers.length, defaultMemberAdded, addMemberMutation]);
+  }, [loadingMembers, familyMembers.length, defaultMemberCreated, addMemberMutation.isPending]);
 
   // Auto-select first member when available
   useEffect(() => {
@@ -153,7 +173,7 @@ const MealPlanning = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center">Caricamento...</div>
+          <div className="text-center animate-fade-in">Caricamento...</div>
         </div>
       </div>
     );
@@ -162,7 +182,7 @@ const MealPlanning = () => {
   console.log('Current state:', {
     familyMembers: familyMembers.length,
     selectedMembers,
-    defaultMemberAdded,
+    defaultMemberCreated,
     addMemberPending: addMemberMutation.isPending
   });
 
@@ -199,43 +219,45 @@ const MealPlanning = () => {
                 />
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
-                  {addMemberMutation.isPending ? 'Aggiungendo membro...' : 'Nessun membro trovato. Aggiungine uno!'}
+                  {addMemberMutation.isPending ? 'Creando membro di default...' : 'Nessun membro trovato. Creando "Io"...'}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="mb-8 relative px-12">
-          <Carousel
-            opts={{ align: "start" }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-4">
-              {weekDates.map((date, index) => (
-                <CarouselItem key={date.toISOString()} className="pl-4 basis-auto">
-                  <Button
-                    variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                    className={`w-[120px] h-[64px] flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
-                      isSameDay(date, selectedDate) 
-                        ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white' 
-                        : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700'
-                    }`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    <span className="text-sm font-medium">
-                      {format(date, 'EEEE', { locale: it })}
-                    </span>
-                    <span className="text-xs opacity-75">
-                      {format(date, 'd MMMM', { locale: it })}
-                    </span>
-                  </Button>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
-            <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
-          </Carousel>
+        <div className="mb-8 max-w-full overflow-hidden">
+          <div className="px-12">
+            <Carousel
+              opts={{ align: "start" }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {weekDates.map((date, index) => (
+                  <CarouselItem key={date.toISOString()} className="pl-4 basis-auto">
+                    <Button
+                      variant={isSameDay(date, selectedDate) ? "default" : "outline"}
+                      className={`w-[120px] h-[64px] flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
+                        isSameDay(date, selectedDate) 
+                          ? 'bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500 text-white' 
+                          : 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700'
+                      }`}
+                      onClick={() => setSelectedDate(date)}
+                    >
+                      <span className="text-sm font-medium">
+                        {format(date, 'EEEE', { locale: it })}
+                      </span>
+                      <span className="text-xs opacity-75">
+                        {format(date, 'd MMMM', { locale: it })}
+                      </span>
+                    </Button>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
+              <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20" />
+            </Carousel>
+          </div>
         </div>
 
         {selectedMembers.length > 0 ? (
@@ -258,10 +280,10 @@ const MealPlanning = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="text-center py-8 animate-fade-in">
             <p className="text-muted-foreground">
               {familyMembers.length === 0 
-                ? 'Aggiungi un membro della famiglia per iniziare' 
+                ? 'Creando il primo membro della famiglia...' 
                 : 'Seleziona almeno un membro della famiglia per visualizzare i piani alimentari'
               }
             </p>
