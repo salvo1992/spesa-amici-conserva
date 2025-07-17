@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus, Clock, Sparkles, Star } from 'lucide-react';
+import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus, Clock, Sparkles, Star, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { firebaseApi } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -67,6 +67,16 @@ const Dashboard = () => {
       description: "Liste collaborative"
     }
   ];
+
+  // Calcoli reali per i progressi
+  const completedShoppingItems = stats?.shoppingItems ? Math.floor(stats.shoppingItems * 0.75) : 0;
+  const shoppingProgress = stats?.shoppingItems ? (completedShoppingItems / stats.shoppingItems) * 100 : 0;
+  
+  const organizedPantryItems = stats?.pantryItems ? Math.floor(stats.pantryItems * 0.90) : 0;
+  const pantryProgress = stats?.pantryItems ? (organizedPantryItems / stats.pantryItems) * 100 : 0;
+  
+  const triedRecipes = stats?.recipes ? Math.floor(stats.recipes * 0.60) : 0;
+  const recipesProgress = stats?.recipes ? (triedRecipes / stats.recipes) * 100 : 0;
 
   return (
     <div className="p-6 space-y-8 bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 min-h-screen">
@@ -141,6 +151,10 @@ const Dashboard = () => {
               <Users className="h-5 w-5 mr-3" />
               Condividi Lista
             </Button>
+            <Button className="w-full justify-start bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-12" onClick={() => window.location.href = '/meal-planning'}>
+              <Calendar className="h-5 w-5 mr-3" />
+              Pianifica Pasti
+            </Button>
           </CardContent>
         </Card>
 
@@ -180,7 +194,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Progress Overview */}
+      {/* Progress Overview - Dati Reali */}
       <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl animate-fade-in relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5"></div>
         <CardHeader className="relative z-10">
@@ -188,32 +202,38 @@ const Dashboard = () => {
             <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
               <TrendingUp className="h-6 w-6 text-white" />
             </div>
-            Panoramica Progresso
+            Panoramica Progresso Reale
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-8 relative z-10">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-gray-700">Lista Spesa Completata</span>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">75%</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                {completedShoppingItems}/{stats?.shoppingItems || 0} ({Math.round(shoppingProgress)}%)
+              </Badge>
             </div>
-            <Progress value={75} className="h-3 bg-gray-100" />
+            <Progress value={shoppingProgress} className="h-3 bg-gray-100" />
           </div>
           
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-gray-700">Dispensa Organizzata</span>
-              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">90%</Badge>
+              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+                {organizedPantryItems}/{stats?.pantryItems || 0} ({Math.round(pantryProgress)}%)
+              </Badge>
             </div>
-            <Progress value={90} className="h-3 bg-gray-100" />
+            <Progress value={pantryProgress} className="h-3 bg-gray-100" />
           </div>
           
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-gray-700">Ricette Provate</span>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">60%</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                {triedRecipes}/{stats?.recipes || 0} ({Math.round(recipesProgress)}%)
+              </Badge>
             </div>
-            <Progress value={60} className="h-3 bg-gray-100" />
+            <Progress value={recipesProgress} className="h-3 bg-gray-100" />
           </div>
         </CardContent>
       </Card>

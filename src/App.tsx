@@ -13,6 +13,7 @@ import Recipes from "./pages/Recipes";
 import Shared from "./pages/Shared";
 import Reviews from "./pages/Reviews";
 import SettingsPage from "./pages/Settings";
+import MealPlanning from "./pages/MealPlanning";
 import NotFound from "./pages/NotFound";
 import AuthForm from "./components/AuthForm";
 
@@ -46,6 +47,7 @@ const AppContent = () => {
         <Route path="/shared" element={<Shared />} />
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/meal-planning" element={<MealPlanning />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
