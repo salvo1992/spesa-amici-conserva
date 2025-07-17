@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -25,6 +25,14 @@ import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
 
+function LayoutWrapper() {
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,7 +40,7 @@ function App() {
         <LanguageProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Layout />}>
+              <Route path="/" element={<LayoutWrapper />}>
                 <Route index element={<Dashboard />} />
                 <Route path="shopping-list" element={<ShoppingList />} />
                 <Route path="pantry" element={<Pantry />} />
