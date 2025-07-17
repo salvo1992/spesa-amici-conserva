@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,6 +21,7 @@ import Privacy from '@/pages/Privacy';
 import Terms from '@/pages/Terms';
 import Cookie from '@/pages/Cookie';
 import NotFound from '@/pages/NotFound';
+import SharedListDetail from '@/pages/SharedListDetail';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +47,7 @@ function App() {
                 <Route path="recipes" element={<Recipes />} />
                 <Route path="meal-planning" element={<MealPlanning />} />
                 <Route path="shared" element={<Shared />} />
+                <Route path="shared/:id" element={<SharedListDetail />} />
                 <Route path="reviews" element={<Reviews />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="privacy" element={<Privacy />} />

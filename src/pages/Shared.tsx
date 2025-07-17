@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +11,14 @@ import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type SharedList } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Shared = () => {
   const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedList, setSelectedList] = useState<any>(null);
+  const navigate = useNavigate();
 
   const [newList, setNewList] = useState({
     name: '',
@@ -119,20 +120,7 @@ const Shared = () => {
 
   const handleOpenList = (list: any) => {
     console.log('Opening list:', list);
-    if (list.owner_id === 'default') {
-      toast({ 
-        title: "Lista Demo", 
-        description: "Questa è una lista di esempio. Crea la tua lista per accedere alle funzionalità complete!",
-        variant: "default"
-      });
-      return;
-    }
-    
-    // Navigazione alla lista specifica
-    toast({ 
-      title: "Apertura lista...", 
-      description: `Accesso alla lista "${list.name}"` 
-    });
+    navigate(`/shared/${list.id}`);
   };
 
   const handleShareList = (list: any) => {

@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
@@ -380,5 +379,60 @@ export const firebaseApi = {
     ];
 
     await Promise.all(deletePromises);
-  }
+  },
+
+  // Shared List Detail functions
+  getSharedList: async (id: string): Promise<SharedList | null> => {
+    if (!db) return null;
+    try {
+      const docRef = doc(db, 'shared_lists', id);
+      const docSnap = await getDocs(query(collection(db, 'shared_lists'), where('__name__', '==', id)));
+      if (!docSnap.empty) {
+        return { id: docSnap.docs[0].id, ...docSnap.docs[0].data() } as SharedList;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching shared list:', error);
+      return null;
+    }
+  },
+
+  updateSharedListItem: async (listId: string, itemId: string, updates: any) => {
+    if (!db) throw new Error('Database non disponibile');
+    try {
+      const listRef = doc(db, 'shared_lists', listId);
+      // In una implementazione reale, aggiorneremmo l'array degli items
+      // Per ora simuliamo l'aggiornamento
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error updating shared list item:', error);
+      throw error;
+    }
+  },
+
+  addSharedListItem: async (listId: string, itemData: any) => {
+    if (!db) throw new Error('Database non disponibile');
+    try {
+      const listRef = doc(db, 'shared_lists', listId);
+      // In una implementazione reale, aggiungeremmo l'item all'array degli items
+      // Per ora simuliamo l'aggiunta
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error adding shared list item:', error);
+      throw error;
+    }
+  },
+
+  deleteSharedListItem: async (listId: string, itemId: string) => {
+    if (!db) throw new Error('Database non disponibile');
+    try {
+      const listRef = doc(db, 'shared_lists', listId);
+      // In una implementazione reale, rimuoveremmo l'item dall'array degli items
+      // Per ora simuliamo la rimozione
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error deleting shared list item:', error);
+      throw error;
+    }
+  },
 };
