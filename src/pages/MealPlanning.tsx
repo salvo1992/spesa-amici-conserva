@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { format, addDays, isSameDay } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { it } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { ChefHat, CalendarDays, Trash2 } from 'lucide-react';
+import { ChefHat, CalendarDays, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { firebaseApi, type FamilyMember, type MealPlan } from '@/lib/firebase';
@@ -22,9 +23,11 @@ import AddFamilyMemberModal from '@/components/AddFamilyMemberModal';
 const MealPlanning = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const queryClient = useQueryClient();
 
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
+  // Genera le date della settimana corrente
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   // Queries
@@ -43,6 +46,14 @@ const MealPlanning = () => {
     queryKey: ['recipes'],
     queryFn: firebaseApi.getRecipes,
   });
+
+  // Auto-creazione del membro "Io" se non ci sono membri
+  useEffect(() => {
+    if (!loadingMembers && familyMembers.length === 0) {
+      console.log('Nessun membro trovato, creando "Io" automaticamente...');
+      addMemberMutation.mutate({ name: 'Io' });
+    }
+  }, [familyMembers, loadingMembers]);
 
   // Mutations
   const addMemberMutation = useMutation({
@@ -102,6 +113,19 @@ const MealPlanning = () => {
     },
   });
 
+  // Funzioni di navigazione settimana
+  const goToPreviousWeek = () => {
+    const newWeekStart = addDays(currentWeekStart, -7);
+    setCurrentWeekStart(newWeekStart);
+    setSelectedDate(newWeekStart);
+  };
+
+  const goToNextWeek = () => {
+    const newWeekStart = addDays(currentWeekStart, 7);
+    setCurrentWeekStart(newWeekStart);
+    setSelectedDate(newWeekStart);
+  };
+
   const getMealsForMember = (memberId: string) => {
     return mealPlans.filter(plan => plan.member_id === memberId);
   };
@@ -149,31 +173,31 @@ const MealPlanning = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header con stile migliorato */}
+        {/* Header con titolo più grande e stilizzato */}
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent mb-4 animate-slide-up tracking-tight">
+          <h1 className="text-6xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent mb-4 animate-slide-up tracking-tight drop-shadow-lg">
             Piano Alimentare Settimanale
           </h1>
-          <div className="text-lg text-muted-foreground animate-fade-in max-w-2xl mx-auto">
+          <div className="text-xl text-muted-foreground animate-fade-in max-w-2xl mx-auto font-medium">
             Organizza i pasti per tutta la famiglia con facilità e precisione
           </div>
         </div>
 
-        {/* Card membri con bottone stilizzato */}
+        {/* Card membri con bottone più stilizzato */}
         <div className="mb-8">
-          <Card className="border-0 shadow-xl bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm animate-fade-in ring-1 ring-red-100 dark:ring-red-900/20">
+          <Card className="border-0 shadow-2xl bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm animate-fade-in ring-1 ring-red-100 dark:ring-red-900/20">
             <CardContent className="p-8">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-gradient-to-r from-red-500 to-orange-500">
+                  <div className="p-3 rounded-full bg-gradient-to-r from-red-500 to-orange-500 shadow-lg">
                     <CalendarDays className="w-6 h-6 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seleziona i Partecipanti</h2>
                 </div>
                 <div className="animate-scale-in">
                   <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
-                    <div className="relative">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-orange-600 to-yellow-600 rounded-xl blur opacity-40 group-hover:opacity-70 transition duration-500 animate-pulse"></div>
+                    <div className="relative bg-white dark:bg-gray-800 rounded-lg p-1">
                       <AddFamilyMemberModal onAddMember={handleAddMember} />
                     </div>
                   </div>
@@ -188,49 +212,59 @@ const MealPlanning = () => {
                 />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  {addMemberMutation.isPending ? 'Creando membro di default...' : 'Nessun membro trovato. Creando "Io"...'}
+                  {addMemberMutation.isPending ? 'Creando membro di default...' : 'Caricamento membri...'}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Carousel calendario con frecce funzionanti */}
+        {/* Navigazione settimanale con calendario migliorato */}
         <div className="mb-8">
-          <div className="px-16">
-            <Carousel
-              opts={{ 
-                align: "start",
-                loop: true,
-                slidesToScroll: 1
-              }}
-              className="w-full"
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToPreviousWeek}
+              className="h-12 w-12 rounded-full border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              <CarouselContent className="-ml-2">
-                {weekDates.map((date, index) => (
-                  <CarouselItem key={date.toISOString()} className="pl-2 basis-auto min-w-[160px]">
-                    <Button
-                      variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                      className={`w-full h-[80px] flex flex-col items-center justify-center gap-2 transition-all duration-500 transform hover:scale-105 ${
-                        isSameDay(date, selectedDate) 
-                          ? 'bg-gradient-to-br from-red-600 via-orange-500 to-red-700 text-white shadow-xl shadow-red-500/25 scale-105 border-0' 
-                          : 'hover:bg-gradient-to-br hover:from-red-50 hover:to-orange-50 dark:hover:from-red-900/20 dark:hover:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600 hover:shadow-lg'
-                      }`}
-                      onClick={() => setSelectedDate(date)}
-                    >
-                      <span className={`text-sm font-semibold ${isSameDay(date, selectedDate) ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                        {format(date, 'EEEE', { locale: it })}
-                      </span>
-                      <span className={`text-xs ${isSameDay(date, selectedDate) ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {format(date, 'd MMMM', { locale: it })}
-                      </span>
-                    </Button>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="h-12 w-12 -left-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300" />
-              <CarouselNext className="h-12 w-12 -right-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300" />
-            </Carousel>
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            
+            <div className="text-lg font-semibold text-gray-700 dark:text-gray-200 min-w-[200px] text-center">
+              {format(currentWeekStart, 'MMMM yyyy', { locale: it })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextWeek}
+              className="h-12 w-12 rounded-full border-2 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 max-w-4xl mx-auto">
+            {weekDates.map((date, index) => (
+              <Button
+                key={date.toISOString()}
+                variant={isSameDay(date, selectedDate) ? "default" : "outline"}
+                className={`h-[80px] flex flex-col items-center justify-center gap-2 transition-all duration-500 transform hover:scale-105 ${
+                  isSameDay(date, selectedDate) 
+                    ? 'bg-gradient-to-br from-red-600 via-orange-500 to-red-700 text-white shadow-xl shadow-red-500/25 scale-105 border-0' 
+                    : 'hover:bg-gradient-to-br hover:from-red-50 hover:to-orange-50 dark:hover:from-red-900/20 dark:hover:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600 hover:shadow-lg'
+                }`}
+                onClick={() => setSelectedDate(date)}
+              >
+                <span className={`text-sm font-semibold ${isSameDay(date, selectedDate) ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                  {format(date, 'EEEE', { locale: it })}
+                </span>
+                <span className={`text-xs ${isSameDay(date, selectedDate) ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {format(date, 'd MMMM', { locale: it })}
+                </span>
+              </Button>
+            ))}
           </div>
         </div>
 
