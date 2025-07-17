@@ -79,6 +79,13 @@ const MealPlanning = () => {
     },
   });
 
+  // Crea automaticamente il membro "Io" se non ci sono membri
+  useEffect(() => {
+    if (!loadingMembers && familyMembers.length === 0) {
+      addMemberMutation.mutate({ name: 'Io' });
+    }
+  }, [familyMembers.length, loadingMembers]);
+
   // Inizializza con il primo membro se disponibile
   useEffect(() => {
     if (familyMembers.length > 0 && selectedMembers.length === 0) {
