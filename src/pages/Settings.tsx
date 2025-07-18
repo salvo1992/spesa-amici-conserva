@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Settings as SettingsIcon, 
   Moon, 
@@ -15,14 +16,21 @@ import {
   FileText, 
   Cookie,
   Info,
-  Calendar
+  Calendar,
+  User,
+  LogOut,
+  Cloud,
+  UserPlus
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import AuthForm from '@/components/AuthForm';
 
 const Settings = () => {
   const { language, setLanguage, t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [cookiesAccepted, setCookiesAccepted] = useState(true);
@@ -87,6 +95,22 @@ const Settings = () => {
     });
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logout effettuato",
+        description: "Sei stato disconnesso con successo"
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Errore durante il logout",
+        variant: "destructive"
+      });
+    }
+  };
+
   const today = new Date().toLocaleDateString('it-IT');
 
   return (
@@ -102,6 +126,80 @@ const Settings = () => {
         </div>
 
         <div className="grid gap-6">
+          {/* Account e Autenticazione */}
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-indigo-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-foreground">
+                <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-foreground">Utente Connesso</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-green-300 text-green-700 dark:text-green-300">
+                      <Cloud className="h-3 w-3 mr-1" />
+                      Sincronizzato
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-foreground">Salvataggio Cloud</Label>
+                      <p className="text-sm text-muted-foreground">
+                        I tuoi dati sono salvati nel cloud e sincronizzati
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleLogout}
+                      className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
+                    <UserPlus className="h-5 w-5" />
+                    <span className="font-medium">Accedi per sincronizzare i dati</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Crea un account o accedi per salvare i tuoi dati nel cloud e accedervi da qualsiasi dispositivo
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Accedi / Registrati
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <AuthForm />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Aspetto */}
           <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-blue-500">
             <CardHeader>
