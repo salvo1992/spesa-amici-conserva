@@ -398,11 +398,30 @@ const Recipes = () => {
           shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
           break;
         case 'instagram':
-          navigator.clipboard.writeText(text);
-          toast({
-            title: "Testo copiato!",
-            description: "Condividi la ricetta su Instagram incollando il testo con l'invito a scaricare l'app"
-          });
+          // Per Instagram, creiamo un link che apre Instagram con un testo preimpostato
+          const instagramText = encodeURIComponent(text.substring(0, 2200)); // Instagram ha limiti di caratteri
+          
+          // Fallback: copia negli appunti e mostra istruzioni
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+              toast({
+                title: "Testo copiato!",
+                description: "Apri Instagram e incolla il testo nel tuo post o story"
+              });
+            }).catch(() => {
+              // Fallback se il clipboard non funziona
+              const textArea = document.createElement('textarea');
+              textArea.value = text;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              toast({
+                title: "Testo copiato!",
+                description: "Apri Instagram e incolla il testo nel tuo post o story"
+              });
+            });
+          }
           return;
       }
       
@@ -410,11 +429,27 @@ const Recipes = () => {
         window.open(shareUrl, '_blank', 'width=600,height=400');
       }
     } else {
-      navigator.clipboard.writeText(text);
-      toast({
-        title: "Ricetta condivisa!",
-        description: "Testo copiato con invito a scaricare l'app"
-      });
+      // Condivisione diretta (copia negli appunti)
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          toast({
+            title: "Ricetta condivisa!",
+            description: "Testo copiato con invito a scaricare l'app"
+          });
+        }).catch(() => {
+          // Fallback se il clipboard non funziona
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          toast({
+            title: "Ricetta condivisa!",
+            description: "Testo copiato con invito a scaricare l'app"
+          });
+        });
+      }
     }
   };
 
@@ -516,6 +551,7 @@ const Recipes = () => {
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Crea Nuova Ricetta</DialogTitle>
+                <p className="text-sm text-muted-foreground">Aggiungi una nuova ricetta al tuo ricettario personale</p>
               </DialogHeader>
               <div className="space-y-4">
                 
@@ -749,15 +785,19 @@ const Recipes = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-orange-900 bg-clip-text text-transparent">
-                {selectedRecipe?.name}
-              </DialogTitle>
+              <div>
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-orange-900 bg-clip-text text-transparent">
+                  {selectedRecipe?.name}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">Dettagli completi della ricetta</p>
+              </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleShareRecipe(selectedRecipe!, 'facebook')}
                   className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  title="Condividi su Facebook"
                 >
                   <Facebook className="h-4 w-4 text-blue-600" />
                 </Button>
@@ -766,6 +806,7 @@ const Recipes = () => {
                   size="sm"
                   onClick={() => handleShareRecipe(selectedRecipe!, 'twitter')}
                   className="hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                  title="Condividi su Twitter"
                 >
                   <Twitter className="h-4 w-4 text-sky-500" />
                 </Button>
@@ -774,6 +815,7 @@ const Recipes = () => {
                   size="sm"
                   onClick={() => handleShareRecipe(selectedRecipe!, 'instagram')}
                   className="hover:bg-pink-50 dark:hover:bg-pink-900/20"
+                  title="Condividi su Instagram"
                 >
                   <Instagram className="h-4 w-4 text-pink-600" />
                 </Button>

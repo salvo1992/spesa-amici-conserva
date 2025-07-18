@@ -44,11 +44,31 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
   };
 
   const handleShare = () => {
-    onShare(recipe);
-    toast({
-      title: "Ricetta condivisa!",
-      description: `${recipe.name} è stata condivisa con invito a scaricare l'app`,
-    });
+    const appName = "Food Manager - Il Vikingo del Web";
+    const appUrl = window.location.origin;
+    const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
+    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prepTime} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast({
+          title: "Ricetta condivisa!",
+          description: `${recipe.name} è stata condivisa con invito a scaricare l'app`,
+        });
+      }).catch(() => {
+        // Fallback se il clipboard non funziona
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        toast({
+          title: "Ricetta condivisa!",
+          description: `${recipe.name} è stata condivisa con invito a scaricare l'app`,
+        });
+      });
+    }
   };
 
   const handleSocialShare = (platform: string) => {
@@ -65,13 +85,33 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
       case 'twitter':
         shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
         break;
-      case 'instagram':
-        navigator.clipboard.writeText(text);
-        toast({
-          title: "Testo copiato!",
-          description: "Condividi su Instagram incollando il testo con l'invito a scaricare l'app"
-        });
-        return;
+        case 'instagram':
+          // Per Instagram, creiamo un link che apre Instagram con un testo preimpostato
+          const instagramText = encodeURIComponent(text.substring(0, 2200)); // Instagram ha limiti di caratteri
+          shareUrl = `https://www.instagram.com/?text=${instagramText}`;
+          
+          // Fallback: copia negli appunti e mostra istruzioni
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+              toast({
+                title: "Testo copiato!",
+                description: "Apri Instagram e incolla il testo nel tuo post o story"
+              });
+            }).catch(() => {
+              // Fallback se il clipboard non funziona
+              const textArea = document.createElement('textarea');
+              textArea.value = text;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              toast({
+                title: "Testo copiato!",
+                description: "Apri Instagram e incolla il testo nel tuo post o story"
+              });
+            });
+          }
+          return;
     }
     
     if (shareUrl) {
@@ -84,9 +124,12 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              {recipe.name}
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {recipe.name}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">Dettagli completi della ricetta con ingredienti e preparazione</p>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" />
