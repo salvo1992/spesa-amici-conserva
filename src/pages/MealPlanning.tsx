@@ -12,7 +12,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { ChefHat, CalendarDays, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChefHat, CalendarDays, Trash2, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { firebaseApi, type FamilyMember, type MealPlan } from '@/lib/firebase';
@@ -175,9 +175,18 @@ const MealPlanning = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header con titolo più grande e stilizzato */}
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="text-6xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent mb-4 animate-slide-up tracking-tight drop-shadow-lg">
-            Piano Alimentare Settimanale
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="relative">
+              <ChefHat className="h-12 w-12 text-red-600 dark:text-red-400 animate-bounce" />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full animate-ping"></div>
+            </div>
+            <h1 className="text-6xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent animate-slide-up tracking-tight drop-shadow-lg">
+              Piano Alimentare Settimanale
+            </h1>
+            <div className="ml-4 p-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl shadow-lg">
+              <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400 animate-pulse" />
+            </div>
+          </div>
           <div className="text-xl text-muted-foreground animate-fade-in max-w-2xl mx-auto font-medium">
             Organizza i pasti per tutta la famiglia con facilità e precisione
           </div>

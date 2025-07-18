@@ -34,7 +34,7 @@ const Recipes = () => {
     category: ''
   });
 
-  // Ricette di default migliorate
+  // Ricette di default migliorate - 15 ricette totali
   const defaultRecipes: Recipe[] = [
     {
       id: 'default-1',
@@ -146,6 +146,216 @@ const Recipes = () => {
       category: 'Secondi Piatti',
       user_id: 'default',
       created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-6',
+      name: 'Lasagne della Domenica',
+      description: 'La lasagna tradizionale italiana con ragù di carne, besciamella cremosa e tanto Parmigiano. Un piatto della domenica che unisce tutta la famiglia.',
+      ingredients: ['500g sfoglia per lasagne', '400g carne macinata mista', '300ml besciamella', '400g pomodori pelati', '200g Parmigiano grattugiato', '1 cipolla', '2 carote', '2 coste sedano', 'Vino rosso', 'Latte', 'Burro', 'Farina'],
+      instructions: [
+        'Prepara il ragù: soffriggi cipolla, carota e sedano tritati finemente.',
+        'Aggiungi la carne e rosolala bene. Sfuma con vino rosso.',
+        'Unisci i pomodori, sala, pepa e cuoci per 2 ore a fuoco dolce.',
+        'Prepara la besciamella: sciogli il burro, aggiungi farina e latte gradualmente.',
+        'Cuoci la sfoglia in acqua salata e adagiala su canovacci.',
+        'Disponi strati alternati di pasta, ragù, besciamella e Parmigiano.',
+        'Termina con besciamella e Parmigiano abbondante.',
+        'Cuoci in forno a 180°C per 45 minuti fino a doratura perfetta.'
+      ],
+      prep_time: 180,
+      servings: 8,
+      category: 'Primi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-7',
+      name: 'Cotoletta alla Milanese DOC',
+      description: 'La vera cotoletta milanese con osso, impanata nel pan grattato e fritta nel burro chiarificato. Croccante fuori, tenera dentro.',
+      ingredients: ['4 costolette di vitello con osso', '3 uova', '300g pan grattato fine', 'Farina 00', '200g burro chiarificato', 'Sale', 'Pepe bianco', 'Limone'],
+      instructions: [
+        'Batti leggermente le costolette per appiattirle (spessore 8mm).',
+        'Passa nella farina, poi nelle uova sbattute, infine nel pan grattato.',
+        'Premi bene il pan grattato perché aderisca perfettamente.',
+        'Scalda il burro chiarificato in una padella larga.',
+        'Friggi le cotolette 3-4 minuti per lato a fuoco medio.',
+        'Devono essere dorate uniformemente e croccanti.',
+        'Scola su carta assorbente e servi subito con spicchi di limone.',
+        'Accompagna con insalata mista e pomodorini.'
+      ],
+      prep_time: 30,
+      servings: 4,
+      category: 'Secondi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-8',
+      name: 'Parmigiana di Melanzane Napoletana',
+      description: 'La parmigiana napoletana autentica con melanzane fritte, pomodoro San Marzano, mozzarella di bufala e basilico fresco.',
+      ingredients: ['3 melanzane grandi', '800g pomodori San Marzano', '500g mozzarella di bufala', '200g Parmigiano grattugiato', 'Basilico fresco', 'Aglio', 'Olio per friggere', 'Sale'],
+      instructions: [
+        'Taglia le melanzane a fette di 1cm, salale e lasciale spurgare 30 minuti.',
+        'Asciuga le melanzane e friggile in olio bollente fino a doratura.',
+        'Prepara il sugo: rosola aglio nell\'olio, aggiungi pomodori e basilico.',
+        'Cuoci il sugo 20 minuti, salando e pepando.',
+        'Taglia la mozzarella a fette e lasciale spurgare.',
+        'In una teglia, alterna strati di melanzane, sugo, mozzarella e Parmigiano.',
+        'Termina con sugo e Parmigiano abbondante.',
+        'Cuoci in forno a 180°C per 40 minuti. Lascia riposare prima di servire.'
+      ],
+      prep_time: 90,
+      servings: 6,
+      category: 'Secondi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-9',
+      name: 'Cannoli Siciliani Originali',
+      description: 'I veri cannoli siciliani con cialda croccante e ricotta di pecora freschissima, aromatizzata con pistacchi di Bronte.',
+      ingredients: ['Per le cialde: 300g farina, 2 cucchiai zucchero, 1 uovo, marsala, strutto', 'Per la crema: 500g ricotta di pecora, 300g zucchero a velo, cannella, pistacchi di Bronte, canditi, gocce di cioccolato'],
+      instructions: [
+        'Impasta farina, zucchero, uovo e marsala fino ad ottenere un impasto liscio.',
+        'Stendi sottilmente e ritaglia cerchi di 10cm di diametro.',
+        'Avvolgi ogni cerchio attorno a un cannello e sigilla con albume.',
+        'Friggi in olio bollente fino a doratura perfetta.',
+        'Setaccia la ricotta e mescola con zucchero a velo e cannella.',
+        'Aggiungi pistacchi tritati, canditi e gocce di cioccolato.',
+        'Riempi le cialde solo al momento di servire per mantenerle croccanti.',
+        'Completa con pistacchi tritati alle estremità e zucchero a velo.'
+      ],
+      prep_time: 60,
+      servings: 12,
+      category: 'Dolci',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-10',
+      name: 'Brasato al Barolo Piemontese',
+      description: 'Il brasato piemontese cucinato nel pregiato vino Barolo con verdure aromatiche. Un secondo piatto raffinato e saporito.',
+      ingredients: ['1,5kg girello di manzo', '1 bottiglia Barolo DOCG', '2 carote', '2 cipolle', '2 coste sedano', 'Rosmarino', 'Alloro', 'Chiodi di garofano', 'Burro', 'Farina'],
+      instructions: [
+        'Marina la carne nel Barolo con verdure e aromi per 12 ore.',
+        'Scola la carne e asciugala bene. Filtra il vino di marinatura.',
+        'Infarinare la carne e rosolala in una casseruola con burro.',
+        'Aggiungi le verdure della marinatura e falle appassire.',
+        'Versa il vino filtrato e porta a bollore.',
+        'Copri e cuoci in forno a 160°C per 3 ore, girando ogni ora.',
+        'La carne deve risultare tenera e il sugo denso.',
+        'Affetta e servi con polenta o purè di patate.'
+      ],
+      prep_time: 240,
+      servings: 6,
+      category: 'Secondi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-11',
+      name: 'Focaccia Genovese Perfetta',
+      description: 'La focaccia ligure autentica con l\'inconfondibile bagnetto di olio, acqua e sale grosso. Soffice, profumata e dorata.',
+      ingredients: ['500g farina 0', '350ml acqua tiepida', '10g lievito di birra', '6 cucchiai olio extravergine', 'Sale fino', 'Sale grosso', 'Rosmarino'],
+      instructions: [
+        'Sciogli il lievito nell\'acqua tiepida con un pizzico di zucchero.',
+        'Mescola farina e sale fino in una ciotola.',
+        'Aggiungi acqua e lievito, poi 4 cucchiai di olio.',
+        'Impasta fino ad ottenere un composto omogeneo e appiccicoso.',
+        'Lascia lievitare 2 ore in luogo tiepido coperta da un canovaccio.',
+        'Versa l\'impasto in una teglia oleata e stendi con le dita.',
+        'Prepara il bagnetto: acqua, olio e sale grosso.',
+        'Cospargi sulla focaccia, aggiungi rosmarino e cuoci a 220°C per 25 minuti.'
+      ],
+      prep_time: 45,
+      servings: 8,
+      category: 'Pane e Lievitati',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-12',
+      name: 'Salmone in Crosta di Pistacchi',
+      description: 'Filetto di salmone norvegese con crosta croccante di pistacchi e erbe aromatiche. Elegante e raffinato.',
+      ingredients: ['4 filetti di salmone (150g cad)', '100g pistacchi sgusciati', '50g pan grattato', 'Prezzemolo', 'Timo', '2 cucchiai senape di Digione', 'Olio extravergine', 'Limone'],
+      instructions: [
+        'Trita finemente pistacchi, pan grattato, prezzemolo e timo.',
+        'Mescola con un filo d\'olio per creare la crosta.',
+        'Spennella i filetti di salmone con la senape.',
+        'Premi la miscela di pistacchi sui filetti creando una crosta uniforme.',
+        'Scalda una padella antiaderente con poco olio.',
+        'Cuoci il salmone 3-4 minuti per lato, crosta verso il basso prima.',
+        'La crosta deve essere dorata e il salmone rosato all\'interno.',
+        'Servi con verdure al vapore e una spruzzata di limone.'
+      ],
+      prep_time: 25,
+      servings: 4,
+      category: 'Secondi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-13',
+      name: 'Cacio e Pepe Romana DOC',
+      description: 'Il piatto simbolo della cucina romana con solo 3 ingredienti: pasta, pecorino Romano DOP e pepe nero. Semplicità perfetta.',
+      ingredients: ['400g tonnarelli o spaghetti', '200g pecorino Romano DOP grattugiato', 'Pepe nero in grani', 'Sale grosso'],
+      instructions: [
+        'Macina abbondante pepe nero al momento.',
+        'Cuoci la pasta in poca acqua salata molto calda.',
+        'Nel frattempo, mescola pecorino e pepe in una ciotola.',
+        'Quando la pasta è quasi al dente, preleva acqua di cottura.',
+        'Scola la pasta e mantecala in padella con poca acqua di cottura.',
+        'Aggiungi il pecorino e pepe, mantecando energicamente.',
+        'L\'amido della pasta deve creare una crema setosa.',
+        'Servi immediatamente con una macinata di pepe fresco.'
+      ],
+      prep_time: 15,
+      servings: 4,
+      category: 'Primi Piatti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-14',
+      name: 'Gelato alla Stracciatella Artigianale',
+      description: 'Il gelato cremoso con scaglie di cioccolato fondente. Una delizia fresca e naturale fatta in casa.',
+      ingredients: ['500ml latte intero', '200ml panna fresca', '150g zucchero', '6 tuorli', '100g cioccolato fondente', 'Vaniglia'],
+      instructions: [
+        'Scalda latte e panna con metà dello zucchero e la vaniglia.',
+        'Sbatti tuorli con lo zucchero rimasto fino a montarli.',
+        'Versa il latte caldo sui tuorli, mescolando continuamente.',
+        'Cuoci a bagnomaria fino a 85°C, mescolando sempre.',
+        'Fai raffreddare completamente in frigorifero per 4 ore.',
+        'Manteca nella gelatiera secondo le istruzioni.',
+        'Sciogli il cioccolato e versalo a filo durante l\'ultima mantecatura.',
+        'Conserva in freezer in contenitore ermetico.'
+      ],
+      prep_time: 45,
+      servings: 8,
+      category: 'Dolci',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'default-15',
+      name: 'Arancini Siciliani al Ragù',
+      description: 'Gli arancini palermitani ripieni di ragù di carne, piselli e caciocavallo. Croccanti fuori, cremosi dentro.',
+      ingredients: ['400g riso Arborio', '1L brodo di carne', '100g Parmigiano', '3 uova', 'Ragù di carne', 'Piselli', 'Caciocavallo a cubetti', 'Pan grattato', 'Farina', 'Olio per friggere'],
+      instructions: [
+        'Cuoci il riso nel brodo fino ad assorbimento completo.',
+        'Manteca con Parmigiano e un uovo. Fai raffreddare.',
+        'Prepara il ragù con carne, pomodoro e piselli.',
+        'Forma delle palline di riso, crea un incavo al centro.',
+        'Riempi con ragù e cubetti di caciocavallo.',
+        'Richiudi sigillando bene la palla di riso.',
+        'Passa nella farina, nell\'uovo sbattuto e nel pan grattato.',
+        'Friggi in olio a 170°C fino a doratura uniforme.'
+      ],
+      prep_time: 60,
+      servings: 12,
+      category: 'Antipasti',
+      user_id: 'default',
+      created_at: '2024-01-01T00:00:00.000Z'
     }
   ];
 
@@ -175,7 +385,8 @@ const Recipes = () => {
   const handleShareRecipe = (recipe: Recipe, platform?: string) => {
     const appName = "Food Manager - Il Vikingo del Web";
     const appUrl = window.location.origin;
-    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min | 👥 Porzioni: ${recipe.servings}\n\n📱 Scopri altre ricette: ${appUrl}`;
+    const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
+    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
     
     if (platform) {
       let shareUrl = '';
@@ -190,7 +401,7 @@ const Recipes = () => {
           navigator.clipboard.writeText(text);
           toast({
             title: "Testo copiato!",
-            description: "Condividi la ricetta su Instagram incollando il testo"
+            description: "Condividi la ricetta su Instagram incollando il testo con l'invito a scaricare l'app"
           });
           return;
       }
@@ -202,7 +413,7 @@ const Recipes = () => {
       navigator.clipboard.writeText(text);
       toast({
         title: "Ricetta condivisa!",
-        description: "Il testo è stato copiato negli appunti"
+        description: "Testo copiato con invito a scaricare l'app"
       });
     }
   };
@@ -277,10 +488,13 @@ const Recipes = () => {
     <div className="p-4 space-y-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 min-h-screen">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border-l-4 border-orange-600 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-center">
           <div className="flex items-center gap-3">
-            <ChefHat className="h-8 w-8 text-orange-600" />
-            <div>
+            <div className="relative">
+              <ChefHat className="h-8 w-8 text-orange-600 animate-bounce" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping"></div>
+            </div>
+            <div className="text-center">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-700 to-orange-900 bg-clip-text text-transparent">
                 {t('recipes')}
               </h1>
@@ -289,6 +503,8 @@ const Recipes = () => {
               </p>
             </div>
           </div>
+        </div>
+        <div className="flex justify-end mt-4">
           
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>

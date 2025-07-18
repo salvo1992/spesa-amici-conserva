@@ -40,6 +40,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             size="sm"
             className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
             onClick={() => onShare(recipe)}
+            title="Condividi ricetta e app"
           >
             <Share2 className="h-4 w-4" />
           </Button>
@@ -94,7 +95,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             variant="outline"
             size="sm"
             onClick={() => onShare(recipe)}
-            className="hover:bg-purple-50 border-purple-200 text-purple-600 hover:border-purple-400"
+            className="hover:bg-purple-50 dark:hover:bg-purple-900/20 border-purple-200 text-purple-600 hover:border-purple-400"
+            title="Condividi ricetta e app"
           >
             <Share2 className="h-4 w-4" />
           </Button>

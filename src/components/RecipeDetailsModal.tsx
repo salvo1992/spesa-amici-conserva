@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ChefHat, ShoppingCart, Share2, Star } from 'lucide-react';
+import { Clock, Users, ChefHat, ShoppingCart, Share2, Star, Facebook, Twitter, Instagram } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface Recipe {
@@ -47,8 +47,36 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
     onShare(recipe);
     toast({
       title: "Ricetta condivisa!",
-      description: `${recipe.name} è stata condivisa`,
+      description: `${recipe.name} è stata condivisa con invito a scaricare l'app`,
     });
+  };
+
+  const handleSocialShare = (platform: string) => {
+    const appName = "Food Manager - Il Vikingo del Web";
+    const appUrl = window.location.origin;
+    const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
+    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prepTime} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
+    
+    let shareUrl = '';
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}&quote=${encodeURIComponent(text)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+        break;
+      case 'instagram':
+        navigator.clipboard.writeText(text);
+        toast({
+          title: "Testo copiato!",
+          description: "Condividi su Instagram incollando il testo con l'invito a scaricare l'app"
+        });
+        return;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
   };
 
   return (
@@ -132,14 +160,42 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
               {recipe.instructions.map((instruction, index) => (
                 <div 
                   key={index}
-                  className="flex gap-4 p-4 bg-white rounded-lg border-l-4 border-primary hover:shadow-md transition-shadow duration-200"
+                  className="flex gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border-l-4 border-primary hover:shadow-md transition-shadow duration-200"
                 >
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white dark:text-gray-900 rounded-full flex items-center justify-center font-bold text-sm">
                     {index + 1}
                   </div>
-                  <p className="text-sm leading-relaxed">{instruction}</p>
+                  <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-100">{instruction}</p>
                 </div>
               ))}
+            </div>
+          </div>
+          
+          {/* Social Share */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Condividi sui social</h3>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => handleSocialShare('facebook')}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+              >
+                <Facebook className="h-4 w-4 mr-2" />
+                Facebook
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('twitter')}
+                className="bg-sky-500 hover:bg-sky-600 text-white flex-1"
+              >
+                <Twitter className="h-4 w-4 mr-2" />
+                Twitter
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('instagram')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex-1"
+              >
+                <Instagram className="h-4 w-4 mr-2" />
+                Instagram
+              </Button>
             </div>
           </div>
         </div>
