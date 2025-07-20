@@ -79,21 +79,21 @@ const Dashboard = () => {
   const recipesProgress = stats?.recipes ? (triedRecipes / stats.recipes) * 100 : 0;
 
   return (
-    <div className="p-6 space-y-8 bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 min-h-screen">
+    <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 lg:space-y-8 bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 min-h-screen">
       {/* Welcome Header */}
-      <div className="relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 animate-fade-in">
+      <div className="relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl border border-white/50 animate-fade-in">
         <div className="absolute inset-0 bg-gradient-to-r from-violet-600/10 via-blue-600/10 to-cyan-600/10"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
                 Ciao {user?.name || 'Utente'}! 👋
               </h1>
-              <p className="text-muted-foreground text-lg">Ecco la panoramica della tua cucina magica ✨</p>
+              <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">Ecco la panoramica della tua cucina magica ✨</p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 px-4 py-2 text-sm font-semibold shadow-lg">
-                <Star className="h-4 w-4 mr-2" />
+              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold shadow-lg">
+                <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Tutto OK
               </Badge>
             </div>
@@ -102,19 +102,19 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {quickStats.map((stat, index) => (
           <Card key={index} className={`${stat.bgColor} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 animate-fade-in hover:scale-105 hover:-translate-y-1 relative overflow-hidden`} style={{ animationDelay: `${index * 100}ms` }}>
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className={`p-4 rounded-2xl bg-white/80 shadow-lg ${stat.borderColor} border`}>
-                  <stat.icon className={`h-8 w-8 ${stat.color}`} />
+            <CardContent className="p-3 sm:p-4 lg:p-6 relative z-10">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className={`p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl bg-white/80 shadow-lg ${stat.borderColor} border self-start`}>
+                  <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 ${stat.color}`} />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-1">{stat.value}</p>
-                  <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide truncate">{stat.title}</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-1">{stat.value}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{stat.description}</p>
                 </div>
               </div>
             </CardContent>
@@ -123,7 +123,7 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl animate-fade-in relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-blue-500/5"></div>
           <CardHeader className="relative z-10">

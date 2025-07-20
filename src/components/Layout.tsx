@@ -58,9 +58,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       {/* Mobile Navigation */}
-      <div className="md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700 fixed bottom-0 left-0 right-0 z-50">
-        <div className="flex justify-around py-2">
-          {navItems.slice(0, 5).map((item) => {
+      <div className="md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700 fixed bottom-0 left-0 right-0 z-50 shadow-lg">
+        <div className="grid grid-cols-4 gap-1 py-2 px-2">
+          {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             
@@ -68,12 +68,36 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center py-2 px-3 rounded-lg ${
-                  isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
+                className={`flex flex-col items-center py-3 px-2 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-xs mt-1">{item.label}</span>
+                <Icon className="h-4 w-4" />
+                <span className="text-xs mt-1 text-center leading-tight">{item.label.split(' ')[0]}</span>
+              </Link>
+            );
+          })}
+        </div>
+        {/* Second row for remaining items */}
+        <div className="grid grid-cols-4 gap-1 py-1 px-2 border-t dark:border-gray-700">
+          {navItems.slice(4).map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center py-2 px-2 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-xs mt-1 text-center leading-tight">{item.label.split(' ')[0]}</span>
               </Link>
             );
           })}
@@ -81,8 +105,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Main Content */}
-      <main className="pb-20 md:pb-0">
-        {children}
+      <main className="pb-32 md:pb-0">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Layout } from '@/components/Layout';
+import { AuthGuard } from '@/components/AuthGuard';
 import { Toaster } from '@/components/ui/toaster';
 import CookieBanner from '@/components/CookieBanner';
 
@@ -27,9 +28,11 @@ const queryClient = new QueryClient();
 
 function LayoutWrapper() {
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <AuthGuard>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </AuthGuard>
   );
 }
 
