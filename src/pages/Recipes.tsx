@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import RecipeDetailsModal from '@/components/RecipeDetailsModal';
 
 const Recipes = () => {
   console.log('Recipes component is rendering...');
@@ -965,123 +966,27 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
         ))}
       </div>
 
-      {/* Recipe Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-orange-900 bg-clip-text text-transparent">
-                  {selectedRecipe?.name}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">Dettagli completi della ricetta</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'whatsapp')}
-                  className="hover:bg-green-50 dark:hover:bg-green-900/20"
-                  title="Condividi su WhatsApp"
-                >
-                  <MessageCircle className="h-4 w-4 text-green-600" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'telegram')}
-                  className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  title="Condividi su Telegram"
-                >
-                  <Send className="h-4 w-4 text-blue-500" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'facebook')}
-                  className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  title="Condividi su Facebook"
-                >
-                  <Facebook className="h-4 w-4 text-blue-600" />
-                </Button>
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   onClick={() => handleShareRecipe(selectedRecipe!, 'users')}
-                   className="hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                   title="Condividi con utenti registrati"
-                 >
-                   <UserPlus className="h-4 w-4 text-purple-600" />
-                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'instagram')}
-                  className="hover:bg-pink-50 dark:hover:bg-pink-900/20"
-                  title="Condividi su Instagram"
-                >
-                  <Instagram className="h-4 w-4 text-pink-600" />
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-          
-          {selectedRecipe && (
-            <div className="space-y-6 mt-6">
-              <div className="flex items-center gap-6 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                  <span className="font-medium text-foreground">{selectedRecipe.prep_time} minuti</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-orange-600" />
-                  <span className="font-medium text-foreground">{selectedRecipe.servings} porzioni</span>
-                </div>
-                <Badge className="bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300">
-                  {selectedRecipe.category}
-                </Badge>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">Descrizione</h3>
-                <p className="text-muted-foreground leading-relaxed">{selectedRecipe.description}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-foreground">Ingredienti</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {selectedRecipe.ingredients.map((ingredient, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200"
-                    >
-                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                      <span className="text-sm text-foreground">{ingredient}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-foreground">Preparazione</h3>
-                <div className="space-y-4">
-                  {selectedRecipe.instructions.map((instruction, index) => (
-                    <div 
-                      key={index}
-                      className="flex gap-4 p-4 bg-white dark:bg-gray-700 rounded-lg border-l-4 border-orange-500 hover:shadow-md transition-shadow duration-200"
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <p className="text-sm leading-relaxed text-foreground">{instruction}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Recipe Details Modal */}
+      <RecipeDetailsModal
+        recipe={selectedRecipe}
+        isOpen={showDetailsDialog}
+        onClose={() => setShowDetailsDialog(false)}
+        onAddToShoppingList={(ingredients) => {
+          // Aggiungi ingredienti alla lista della spesa
+          ingredients.forEach(ingredient => {
+            // Simulazione aggiunta alla lista
+            console.log('Aggiunto ingrediente:', ingredient);
+          });
+          toast({
+            title: "Ingredienti aggiunti!",
+            description: `${ingredients.length} ingredienti aggiunti alla lista della spesa`,
+          });
+        }}
+        onShare={(recipe) => handleShareRecipe(recipe)}
+        onEdit={handleEditRecipe}
+        onDelete={(recipeId) => handleDeleteRecipe(filteredRecipes.find(r => r.id === recipeId)!)}
+        showEditDelete={selectedRecipe?.user_id === 'default'}
+      />
       
       {/* Edit Recipe Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

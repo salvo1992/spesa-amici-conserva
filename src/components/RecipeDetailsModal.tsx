@@ -8,17 +8,7 @@ import { Clock, Users, ChefHat, ShoppingCart, Share2, Star, Facebook, Instagram,
 import { toast } from '@/hooks/use-toast';
 import { searchUsers, shareRecipeWithUser } from '@/lib/firebase';
 
-interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  prepTime: number;
-  servings: number;
-  ingredients: string[];
-  instructions: string[];
-  category: string;
-}
+import { Recipe } from '@/lib/firebase';
 
 interface RecipeDetailsModalProps {
   recipe: Recipe | null;
@@ -59,7 +49,7 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
     const appName = "Food Manager - Il Vikingo del Web";
     const appUrl = window.location.origin;
     const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
-    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prepTime} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
+    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
     
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(() => {
@@ -87,7 +77,7 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
     const appName = "Food Manager";
     const appUrl = window.location.origin;
     const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
-    const text = `🍽️ ${appName} - ${recipe.name}, ${recipe.prepTime} min\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prepTime} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl} | Google Play Store`;
+    const text = `🍽️ ${appName} - ${recipe.name}, ${recipe.prep_time} min\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl} | Google Play Store`;
     
     let shareUrl = '';
     switch (platform) {
@@ -212,7 +202,7 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
           <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-blue-500" />
-              <span className="font-medium">{recipe.prepTime} minuti</span>
+              <span className="font-medium">{recipe.prep_time} minuti</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-green-500" />
