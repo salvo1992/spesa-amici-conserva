@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle, Edit, ShoppingCart, Clock } from 'lucide-react';
+import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle, Edit, ShoppingCart, Clock, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,16 +103,89 @@ const Pantry = () => {
     return null;
   };
 
-  const handleEditItem = (item: any) => {
-    setEditingItem(item);
-    setShowEditDialog(true);
+  const handleUpdateItem = async () => {
+    if (!editingItem || !editingItem.name.trim()) {
+      toast({
+        title: "⚠️ Errore",
+        description: "Inserisci il nome del prodotto",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await firebaseApi.updatePantryItem(editingItem.id, {
+        name: editingItem.name,
+        quantity: editingItem.quantity,
+        unit: editingItem.unit,
+        category: editingItem.category,
+        expiry_date: editingItem.expiry_date,
+        status: getExpiryStatus(editingItem.expiry_date) as 'abbondante' | 'normale' | 'scarso' | 'scaduto'
+      });
+
+      toast({
+        title: "✅ Prodotto modificato",
+        description: "Le modifiche sono state salvate con successo"
+      });
+      
+      setShowEditDialog(false);
+      setEditingItem(null);
+      loadPantryItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile salvare le modifiche",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddToShoppingList = (item: any) => {
-    toast({
-      title: "✅ Aggiunto alla lista spesa",
-      description: `${item.name} è stato aggiunto alla lista della spesa`
-    });
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    try {
+      await firebaseApi.deletePantryItem(itemId);
+      
+      toast({
+        title: "🗑️ Prodotto eliminato",
+        description: `${itemName} è stato rimosso dalla dispensa`
+      });
+      
+      loadPantryItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile eliminare il prodotto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddToShoppingList = async (item: PantryItem) => {
+    try {
+      await firebaseApi.createShoppingItem({
+        name: item.name,
+        quantity: `${item.quantity} ${item.unit}`,
+        category: item.category,
+        priority: 'media',
+        cost: 0,
+        completed: false
+      });
+
+      toast({
+        title: "✅ Aggiunto alla lista spesa",
+        description: `${item.name} è stato aggiunto alla lista della spesa`
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiungere il prodotto alla lista",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditItem = (item: PantryItem) => {
+    setEditingItem(item);
+    setShowEditDialog(true);
   };
 
   const handleAddItem = async () => {
@@ -340,6 +413,14 @@ const Pantry = () => {
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       🛒 Lista
                     </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleDeleteItem(item.id, item.name)}
+                      className="hover:border-red-500 hover:text-red-600 transition-all duration-300"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -551,20 +632,17 @@ const Pantry = () => {
                 
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={() => {
-                      toast({
-                        title: "✅ Prodotto modificato",
-                        description: "Le modifiche sono state salvate"
-                      });
-                      setShowEditDialog(false);
-                    }}
+                    onClick={handleUpdateItem}
                     className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:scale-105"
                   >
                     💾 Salva Modifiche
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => setShowEditDialog(false)}
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setEditingItem(null);
+                    }}
                     className="border-green-300 text-green-700 hover:bg-green-50"
                   >
                     ❌ Annulla
