@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,128 +10,227 @@ import { Label } from '@/components/ui/label';
 import { ShoppingCart, Plus, Trash2, Check, X, Share2, Package, MessageCircle, Sparkles } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { firebaseApi, ShoppingItem } from '@/lib/firebase';
 
 const ShoppingList = () => {
   const { t } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
+  const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({
     name: '',
-    quantity: 1,
-    unit: 'pz',
+    quantity: '1',
     category: 'Altro',
-    type: 'Generico',
-    expiryDate: ''
+    priority: 'media' as 'alta' | 'media' | 'bassa',
+    cost: 0
   });
 
-  // Lista ordinata per tipo
-  const defaultItems = [
-    {
-      id: 'shop-1',
-      name: 'Latte Fresco',
-      quantity: 2,
-      unit: 'litri',
-      category: 'Latticini',
-      priority: 'normal' ,
-      type: 'Fresco'
-    },
-    {
-      id: 'shop-2',
-      name: 'Pane Integrale',
-      quantity: 1,
-      unit: 'pagnotta',
-      category: 'Panetteria',
-      priority: 'high',
-      type: 'Panetteria'
-    },
-    {
-      id: 'shop-3',
-      name: 'Mozzarella di Bufala',
-      quantity: 3,
-      unit: 'confezioni',
-      category: 'Latticini',
-      priority: 'normal',
-      type: 'Fresco'
-    },
-    {
-      id: 'shop-4',
-      name: 'Pomodori San Marzano',
-      quantity: 2,
-      unit: 'kg',
-      category: 'Frutta e Verdura',
-      priority: 'high',
-      type: 'Fresco'
-    },
-    {
-      id: 'shop-5',
-      name: 'Basilico Fresco',
-      quantity: 1,
-      unit: 'mazzo',
-      category: 'Erbe Aromatiche',
-      priority: 'normal',
-      type: 'Fresco'
+  // Carica gli item della lista spesa all'avvio
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadShoppingItems();
     }
-  ].sort((a, b) => a.type.localeCompare(b.type));
+  }, [isAuthenticated]);
+
+  const loadShoppingItems = async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await firebaseApi.getShoppingItems();
+      setItems(data);
+      
+      // Inizializza lo stato dei checked items
+      const checkedState: {[key: string]: boolean} = {};
+      data.forEach(item => {
+        checkedState[item.id] = item.completed;
+      });
+      setCheckedItems(checkedState);
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile caricare la lista della spesa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'alta': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+      case 'media': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'bassa': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
-  const toggleItemCheck = (itemId: string) => {
+  const toggleItemCheck = async (itemId: string) => {
+    const newState = !checkedItems[itemId];
+    
     setCheckedItems(prev => ({
       ...prev,
-      [itemId]: !prev[itemId]
+      [itemId]: newState
     }));
+
+    try {
+      await firebaseApi.updateShoppingItem(itemId, { completed: newState });
+      
+      if (newState) {
+        toast({
+          title: "✅ Completato!",
+          description: "Prodotto segnato come acquistato"
+        });
+      }
+    } catch (error) {
+      // Ripristina lo stato precedente in caso di errore
+      setCheckedItems(prev => ({
+        ...prev,
+        [itemId]: !newState
+      }));
+      
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiornare lo stato del prodotto",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddToPantry = (item: any) => {
-    toast({
-      title: "Aggiunto alla dispensa",
-      description: `${item.name} è stato aggiunto alla dispensa con scadenza automatica`
-    });
+  const handleAddToPantry = async (item: ShoppingItem) => {
+    try {
+      await firebaseApi.createPantryItem({
+        name: item.name,
+        quantity: parseInt(item.quantity) || 1,
+        unit: 'pz',
+        category: item.category,
+        expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 giorni da oggi
+        status: 'normale'
+      });
+
+      toast({
+        title: "✅ Aggiunto alla dispensa",
+        description: `${item.name} è stato aggiunto alla dispensa`
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiungere il prodotto alla dispensa",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleWhatsAppShare = () => {
-    const itemsList = defaultItems
-      .filter(item => !checkedItems[item.id])
-      .map(item => `• ${item.name} - ${item.quantity} ${item.unit}`)
+    const uncheckedItems = items.filter(item => !checkedItems[item.id]);
+    
+    if (uncheckedItems.length === 0) {
+      toast({
+        title: "🎉 Lista vuota!",
+        description: "Tutti gli elementi sono stati completati",
+      });
+      return;
+    }
+
+    const itemsList = uncheckedItems
+      .map(item => `• ${item.name} (${item.quantity}) - €${item.cost.toFixed(2)}`)
       .join('\n');
     
-    const message = `🛒 *Lista della Spesa - Food Manager*\n\n${itemsList}\n\n📱 Condiviso da Food Manager - Il Vikingo del Web`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const total = uncheckedItems.reduce((sum, item) => sum + item.cost, 0);
+    
+    const message = `🛒 *Lista della Spesa* 🛒\n\n${itemsList}\n\n💰 *Totale stimato:* €${total.toFixed(2)}\n\n📱 Inviato da Food Manager`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+    
     window.open(whatsappUrl, '_blank');
     
     toast({
-      title: "Lista condivisa su WhatsApp",
-      description: "La lista è stata aperta su WhatsApp"
+      title: "📱 Lista condivisa!",
+      description: "La lista è stata aperta in WhatsApp",
     });
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "❌ Accesso richiesto",
+        description: "Devi effettuare l'accesso per aggiungere prodotti",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!newItem.name.trim()) {
       toast({
-        title: "Errore",
+        title: "⚠️ Errore",
         description: "Inserisci il nome del prodotto",
         variant: "destructive"
       });
       return;
     }
 
-    toast({
-      title: "Prodotto aggiunto",
-      description: "Il prodotto è stato aggiunto alla lista della spesa"
-    });
-    
-    setShowAddDialog(false);
-    setNewItem({ name: '', quantity: 1, unit: 'pz', category: 'Altro', type: 'Generico', expiryDate: '' });
+    try {
+      await firebaseApi.createShoppingItem({
+        name: newItem.name,
+        quantity: newItem.quantity,
+        category: newItem.category,
+        priority: newItem.priority,
+        cost: newItem.cost,
+        completed: false
+      });
+
+      toast({
+        title: "✅ Prodotto aggiunto",
+        description: "Il prodotto è stato aggiunto alla lista della spesa"
+      });
+      
+      setShowAddDialog(false);
+      setNewItem({ name: '', category: 'Altro', quantity: '1', priority: 'media', cost: 0 });
+      
+      // Ricarica la lista
+      loadShoppingItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiungere il prodotto alla lista",
+        variant: "destructive"
+      });
+    }
   };
 
   const completedCount = Object.values(checkedItems).filter(Boolean).length;
-  const totalCount = defaultItems.length;
+  const totalCount = items.length;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-blue-600" />
+          <h2 className="text-2xl font-bold mb-2">Accesso Richiesto</h2>
+          <p className="text-muted-foreground">Effettua l'accesso per gestire la tua lista della spesa</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Caricamento lista della spesa...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
@@ -167,7 +265,7 @@ const ShoppingList = () => {
 
         {/* Shopping Items */}
         <div className="space-y-4 mb-8">
-          {defaultItems.map((item, index) => (
+          {items.map((item, index) => (
             <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg transition-all duration-300 border-l-4 border-blue-500 ${checkedItems[item.id] ? 'opacity-60' : 'hover:shadow-xl hover:-translate-y-1'} animate-fade-in`} style={{animationDelay: `${index * 0.1}s`}}>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-4">
@@ -185,16 +283,19 @@ const ShoppingList = () => {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm text-muted-foreground">
-                            {item.quantity} {item.unit}
+                            {item.quantity}
                           </span>
                           <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:scale-105 transition-transform duration-200">
                             {item.category}
                           </Badge>
-                          {item.priority === 'high' && (
+                          {item.priority === 'alta' && (
                             <Badge className={getPriorityColor(item.priority) + " animate-pulse"}>
                               Priorità Alta
                             </Badge>
                           )}
+                          <span className="text-sm font-medium text-green-600">
+                            €{item.cost.toFixed(2)}
+                          </span>
                         </div>
                       </div>
                       
@@ -298,21 +399,24 @@ const ShoppingList = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="item-type" className="text-sm font-semibold">Tipo Prodotto</Label>
-                <Select value={newItem.type} onValueChange={(value) => setNewItem({...newItem, type: value})}>
+                <Label htmlFor="item-category" className="text-sm font-semibold">Categoria</Label>
+                <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
                   <SelectTrigger className="transition-all duration-300 hover:scale-105">
-                    <SelectValue placeholder="Seleziona tipo" />
+                    <SelectValue placeholder="Seleziona categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Fresco">🥬 Fresco</SelectItem>
-                    <SelectItem value="Surgelato">🧊 Surgelato</SelectItem>
-                    <SelectItem value="Conserva">🥫 Conserva</SelectItem>
-                    <SelectItem value="Bevanda">🥤 Bevanda</SelectItem>
-                    <SelectItem value="Panetteria">🍞 Panetteria</SelectItem>
+                    <SelectItem value="Frutta e Verdura">🥬 Frutta e Verdura</SelectItem>
+                    <SelectItem value="Carne e Pesce">🥩 Carne e Pesce</SelectItem>
                     <SelectItem value="Latticini">🥛 Latticini</SelectItem>
-                    <SelectItem value="Carne">🥩 Carne</SelectItem>
-                    <SelectItem value="Pesce">🐟 Pesce</SelectItem>
-                    <SelectItem value="Generico">📦 Generico</SelectItem>
+                    <SelectItem value="Cereali e Pasta">🍝 Cereali e Pasta</SelectItem>
+                    <SelectItem value="Pane e Dolci">🍞 Pane e Dolci</SelectItem>
+                    <SelectItem value="Bevande">🥤 Bevande</SelectItem>
+                    <SelectItem value="Condimenti">🫒 Condimenti</SelectItem>
+                    <SelectItem value="Surgelati">🧊 Surgelati</SelectItem>
+                    <SelectItem value="Conserve">🥫 Conserve</SelectItem>
+                    <SelectItem value="Pulizia Casa">🧽 Pulizia Casa</SelectItem>
+                    <SelectItem value="Igiene Personale">🧴 Igiene Personale</SelectItem>
+                    <SelectItem value="Altro">📦 Altro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -322,23 +426,39 @@ const ShoppingList = () => {
                   <Label htmlFor="item-quantity" className="text-sm font-semibold">Quantità</Label>
                   <Input
                     id="item-quantity"
-                    type="number"
-                    min="1"
                     value={newItem.quantity}
-                    onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value)})}
+                    onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                    placeholder="1 kg, 2 pz..."
                     className="transition-all duration-300 focus:scale-105"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="item-unit" className="text-sm font-semibold">Unità</Label>
+                  <Label htmlFor="item-cost" className="text-sm font-semibold">Prezzo (€)</Label>
                   <Input
-                    id="item-unit"
-                    value={newItem.unit}
-                    onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
-                    placeholder="kg, pz, lt..."
+                    id="item-cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newItem.cost}
+                    onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
+                    placeholder="0.00"
                     className="transition-all duration-300 focus:scale-105"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="item-priority" className="text-sm font-semibold">Priorità</Label>
+                <Select value={newItem.priority} onValueChange={(value: 'alta' | 'media' | 'bassa') => setNewItem({...newItem, priority: value})}>
+                  <SelectTrigger className="transition-all duration-300 hover:scale-105">
+                    <SelectValue placeholder="Seleziona priorità" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alta">🔴 Alta</SelectItem>
+                    <SelectItem value="media">🟡 Media</SelectItem>
+                    <SelectItem value="bassa">🟢 Bassa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="flex gap-3 pt-4">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,23 +10,56 @@ import { Label } from '@/components/ui/label';
 import { Package, Plus, Search, Filter, Calendar, AlertTriangle, CheckCircle, Edit, ShoppingCart, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { firebaseApi, PantryItem } from '@/lib/firebase';
 
 const Pantry = () => {
   const { t } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterQuantity, setFilterQuantity] = useState('all');
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
+  const [items, setItems] = useState<PantryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: 1,
     unit: 'pz',
-    expiryDate: '',
+    expiry_date: '',
     category: 'Altro',
-    type: 'Generico'
+    status: 'normale' as 'abbondante' | 'normale' | 'scarso' | 'scaduto'
   });
+
+  // Carica i prodotti della dispensa all'avvio
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadPantryItems();
+    }
+  }, [isAuthenticated]);
+
+  const loadPantryItems = async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await firebaseApi.getPantryItems();
+      setItems(data);
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile caricare i prodotti della dispensa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Helper function to check expiry status
   const getExpiryStatus = (expiryDate: string) => {
@@ -35,91 +68,36 @@ const Pantry = () => {
     const diffTime = expiry.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return 'expired';
-    if (diffDays <= 5) return 'expiring';
-    return 'fresh';
+    if (diffDays < 0) return 'scaduto';
+    if (diffDays <= 5) return 'scarso';
+    return 'normale';
   };
-
-  // Updated default items with calculated status
-  const defaultItems = [
-    {
-      id: 'pantry-1',
-      name: 'Pasta Spaghetti',
-      quantity: 2,
-      unit: 'kg',
-      expiryDate: '2024-12-31',
-      category: 'Pasta e Cereali',
-      type: 'Generico',
-      status: 'fresh'
-    },
-    {
-      id: 'pantry-2',
-      name: 'Pomodori Pelati',
-      quantity: 4,
-      unit: 'lattine',
-      expiryDate: '2025-06-15',
-      category: 'Conserve',
-      type: 'Conserva',
-      status: 'fresh'
-    },
-    {
-      id: 'pantry-3',
-      name: 'Parmigiano Reggiano',
-      quantity: 1,
-      unit: 'kg',
-      expiryDate: '2024-08-01',
-      category: 'Latticini',
-      type: 'Fresco',
-      status: 'expiring'
-    },
-    {
-      id: 'pantry-4',
-      name: 'Olio Extra Vergine',
-      quantity: 1,
-      unit: 'bottiglia',
-      expiryDate: '2025-03-10',
-      category: 'Condimenti',
-      type: 'Generico',
-      status: 'fresh'
-    },
-    {
-      id: 'pantry-5',
-      name: 'Farina 00',
-      quantity: 3,
-      unit: 'kg',
-      expiryDate: '2024-07-15',
-      category: 'Farine e Lieviti',
-      type: 'Generico',
-      status: 'expired'
-    }
-  ].map(item => ({
-    ...item,
-    status: getExpiryStatus(item.expiryDate)
-  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'fresh': return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300';
-      case 'expiring': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
-      case 'expired': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+      case 'abbondante': return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300';
+      case 'normale': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300';
+      case 'scarso': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'scaduto': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'fresh': return <CheckCircle className="h-4 w-4" />;
-      case 'expiring': return <Clock className="h-4 w-4" />;
-      case 'expired': return <AlertTriangle className="h-4 w-4" />;
+      case 'abbondante': return <CheckCircle className="h-4 w-4" />;
+      case 'normale': return <Package className="h-4 w-4" />;
+      case 'scarso': return <Clock className="h-4 w-4" />;
+      case 'scaduto': return <AlertTriangle className="h-4 w-4" />;
       default: return <Package className="h-4 w-4" />;
     }
   };
 
   const getExpiryAlertIcon = (status: string) => {
-    if (status === 'expiring') {
+    if (status === 'scarso') {
       return <Clock className="h-5 w-5 text-yellow-500 animate-pulse" />;
     }
-    if (status === 'expired') {
+    if (status === 'scaduto') {
       return <AlertTriangle className="h-5 w-5 text-red-500 animate-bounce" />;
     }
     return null;
@@ -137,7 +115,16 @@ const Pantry = () => {
     });
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "❌ Accesso richiesto",
+        description: "Devi effettuare l'accesso per aggiungere prodotti",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!newItem.name.trim()) {
       toast({
         title: "⚠️ Errore",
@@ -147,18 +134,45 @@ const Pantry = () => {
       return;
     }
 
-    toast({
-      title: "✅ Prodotto aggiunto",
-      description: "Il prodotto è stato aggiunto alla dispensa"
-    });
-    
-    setShowAddDialog(false);
-    setNewItem({ name: '', quantity: 1, unit: 'pz', expiryDate: '', category: 'Altro', type: 'Generico' });
+    try {
+      await firebaseApi.createPantryItem({
+        name: newItem.name,
+        quantity: newItem.quantity,
+        unit: newItem.unit,
+        category: newItem.category,
+        expiry_date: newItem.expiry_date,
+        status: getExpiryStatus(newItem.expiry_date) as 'abbondante' | 'normale' | 'scarso' | 'scaduto'
+      });
+
+      toast({
+        title: "✅ Prodotto aggiunto",
+        description: "Il prodotto è stato aggiunto alla dispensa"
+      });
+      
+      setShowAddDialog(false);
+      setNewItem({ 
+        name: '', 
+        quantity: 1, 
+        unit: 'pz', 
+        expiry_date: '', 
+        category: 'Altro', 
+        status: 'normale' 
+      });
+      
+      // Ricarica i prodotti
+      loadPantryItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiungere il prodotto alla dispensa",
+        variant: "destructive"
+      });
+    }
   };
 
-  const filteredItems = defaultItems.filter(item => {
+  const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesType = filterType === 'all' || item.category === filterType;
     const matchesQuantity = filterQuantity === 'all' || 
       (filterQuantity === 'low' && item.quantity <= 2) ||
       (filterQuantity === 'medium' && item.quantity > 2 && item.quantity <= 5) ||
@@ -166,6 +180,29 @@ const Pantry = () => {
     
     return matchesSearch && matchesType && matchesQuantity;
   });
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <Package className="h-16 w-16 mx-auto mb-4 text-green-600" />
+          <h2 className="text-2xl font-bold mb-2">Accesso Richiesto</h2>
+          <p className="text-muted-foreground">Effettua l'accesso per gestire la tua dispensa</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Caricamento dispensa...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
@@ -206,13 +243,14 @@ const Pantry = () => {
                     <SelectValue placeholder="Tipo prodotto" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">🍽️ Tutti i tipi</SelectItem>
-                    <SelectItem value="Generico">📦 Generico</SelectItem>
-                    <SelectItem value="Fresco">🥬 Fresco</SelectItem>
-                    <SelectItem value="Surgelato">🧊 Surgelato</SelectItem>
-                    <SelectItem value="Conserva">🥫 Conserva</SelectItem>
-                    <SelectItem value="Bevanda">🥤 Bevanda</SelectItem>
-                    <SelectItem value="Snack">🍿 Snack</SelectItem>
+                    <SelectItem value="all">🍽️ Tutte le categorie</SelectItem>
+                    <SelectItem value="Frutta e Verdura">🥬 Frutta e Verdura</SelectItem>
+                    <SelectItem value="Carne e Pesce">🥩 Carne e Pesce</SelectItem>
+                    <SelectItem value="Latticini">🧀 Latticini</SelectItem>
+                    <SelectItem value="Cereali e Pasta">🍝 Cereali e Pasta</SelectItem>
+                    <SelectItem value="Conserve">🥫 Conserve</SelectItem>
+                    <SelectItem value="Condimenti">🫒 Condimenti</SelectItem>
+                    <SelectItem value="Altro">📦 Altro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -254,7 +292,7 @@ const Pantry = () => {
                       </div>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300">
-                          {item.type}
+                          {item.category}
                         </Badge>
                       </div>
                     </div>
@@ -276,10 +314,10 @@ const Pantry = () => {
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className={`font-medium ${
-                        item.status === 'expired' ? 'text-red-600' : 
-                        item.status === 'expiring' ? 'text-yellow-600' : 'text-foreground'
+                        item.status === 'scaduto' ? 'text-red-600' : 
+                        item.status === 'scarso' ? 'text-yellow-600' : 'text-foreground'
                       }`}>
-                        {new Date(item.expiryDate).toLocaleDateString()}
+                        {new Date(item.expiry_date).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
@@ -371,18 +409,19 @@ const Pantry = () => {
               </div>
               
               <div>
-                <Label htmlFor="item-type" className="text-green-700 font-medium">🏷️ Tipo Prodotto</Label>
-                <Select value={newItem.type} onValueChange={(value) => setNewItem({...newItem, type: value})}>
+                <Label htmlFor="item-category" className="text-green-700 font-medium">🏷️ Categoria</Label>
+                <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
                   <SelectTrigger className="border-green-300 focus:ring-green-500">
-                    <SelectValue placeholder="Seleziona tipo" />
+                    <SelectValue placeholder="Seleziona categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Generico">📦 Generico</SelectItem>
-                    <SelectItem value="Fresco">🥬 Fresco</SelectItem>
-                    <SelectItem value="Surgelato">🧊 Surgelato</SelectItem>
-                    <SelectItem value="Conserva">🥫 Conserva</SelectItem>
-                    <SelectItem value="Bevanda">🥤 Bevanda</SelectItem>
-                    <SelectItem value="Snack">🍿 Snack</SelectItem>
+                    <SelectItem value="Frutta e Verdura">🥬 Frutta e Verdura</SelectItem>
+                    <SelectItem value="Carne e Pesce">🥩 Carne e Pesce</SelectItem>
+                    <SelectItem value="Latticini">🧀 Latticini</SelectItem>
+                    <SelectItem value="Cereali e Pasta">🍝 Cereali e Pasta</SelectItem>
+                    <SelectItem value="Conserve">🥫 Conserve</SelectItem>
+                    <SelectItem value="Condimenti">🫒 Condimenti</SelectItem>
+                    <SelectItem value="Altro">📦 Altro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -416,8 +455,8 @@ const Pantry = () => {
                 <Input
                   id="item-expiry"
                   type="date"
-                  value={newItem.expiryDate}
-                  onChange={(e) => setNewItem({...newItem, expiryDate: e.target.value})}
+                    value={newItem.expiry_date}
+                    onChange={(e) => setNewItem({...newItem, expiry_date: e.target.value})}
                   className="focus:ring-2 focus:ring-green-500 border-green-300"
                 />
               </div>
@@ -462,18 +501,19 @@ const Pantry = () => {
                 </div>
                 
                 <div>
-                  <Label className="text-green-700 font-medium">🏷️ Tipo Prodotto</Label>
-                  <Select value={editingItem.type} onValueChange={(value) => setEditingItem({...editingItem, type: value})}>
+                  <Label className="text-green-700 font-medium">🏷️ Categoria</Label>
+                  <Select value={editingItem.category} onValueChange={(value) => setEditingItem({...editingItem, category: value})}>
                     <SelectTrigger className="border-green-300 focus:ring-green-500">
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Generico">📦 Generico</SelectItem>
-                      <SelectItem value="Fresco">🥬 Fresco</SelectItem>
-                      <SelectItem value="Surgelato">🧊 Surgelato</SelectItem>
-                      <SelectItem value="Conserva">🥫 Conserva</SelectItem>
-                      <SelectItem value="Bevanda">🥤 Bevanda</SelectItem>
-                      <SelectItem value="Snack">🍿 Snack</SelectItem>
+                      <SelectItem value="Frutta e Verdura">🥬 Frutta e Verdura</SelectItem>
+                      <SelectItem value="Carne e Pesce">🥩 Carne e Pesce</SelectItem>
+                      <SelectItem value="Latticini">🧀 Latticini</SelectItem>
+                      <SelectItem value="Cereali e Pasta">🍝 Cereali e Pasta</SelectItem>
+                      <SelectItem value="Conserve">🥫 Conserve</SelectItem>
+                      <SelectItem value="Condimenti">🫒 Condimenti</SelectItem>
+                      <SelectItem value="Altro">📦 Altro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -503,8 +543,8 @@ const Pantry = () => {
                   <Label className="text-green-700 font-medium">📅 Data di Scadenza</Label>
                   <Input
                     type="date"
-                    value={editingItem.expiryDate}
-                    onChange={(e) => setEditingItem({...editingItem, expiryDate: e.target.value})}
+                    value={editingItem.expiry_date}
+                    onChange={(e) => setEditingItem({...editingItem, expiry_date: e.target.value})}
                     className="focus:ring-2 focus:ring-green-500 border-green-300"
                   />
                 </div>

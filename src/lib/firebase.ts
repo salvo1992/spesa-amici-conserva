@@ -134,6 +134,9 @@ export const CATEGORIES = {
 
 // Auth functions
 export const firebaseAuth = {
+  auth,
+  isConfigured: () => isFirebaseConfigured() && !!auth,
+  
   isAuthenticated: () => {
     if (!auth) return false;
     return !!auth.currentUser;

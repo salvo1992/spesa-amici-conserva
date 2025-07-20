@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { firebaseAuth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface User {
   uid: string;
@@ -30,18 +31,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Controllo se ci sono credenziali salvate localmente
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-      } catch (error) {
-        localStorage.removeItem('user');
-      }
-    }
+    // Controllo Firebase Auth state
+    let unsubscribe: (() => void) | undefined;
     
-    setIsLoading(false);
+    if (firebaseAuth.isConfigured && firebaseAuth.isConfigured()) {
+      // Firebase è configurato - usa l'autenticazione reale
+      unsubscribe = onAuthStateChanged(firebaseAuth.auth, (firebaseUser) => {
+        if (firebaseUser) {
+          const userData = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Utente'
+          };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        } else {
+          setUser(null);
+          localStorage.removeItem('user');
+        }
+        setIsLoading(false);
+      });
+    } else {
+      // Firebase non configurato - usa localStorage come fallback
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          setUser(userData);
+        } catch (error) {
+          localStorage.removeItem('user');
+        }
+      }
+      setIsLoading(false);
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const login = (userData: User) => {
