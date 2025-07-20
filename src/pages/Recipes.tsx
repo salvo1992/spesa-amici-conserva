@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const Recipes = () => {
+  console.log('Recipes component is rendering...');
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -689,7 +690,7 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
                 {t('recipes')}
               </h1>
               <p className="text-muted-foreground mt-1">
-                {filteredRecipes.length} ricette disponibili
+                {filteredRecipes.length} ricette disponibili • Aggiornato
               </p>
             </div>
           </div>
