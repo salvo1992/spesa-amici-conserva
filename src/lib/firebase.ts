@@ -510,12 +510,13 @@ export const firebaseApi = {
       console.log('Recupero commenti per recensione:', reviewId);
       const q = query(
         collection(db, 'comments'),
-        where('review_id', '==', reviewId),
-        orderBy('created_at', 'asc')
+        where('review_id', '==', reviewId)
       );
       const snapshot = await getDocs(q);
       console.log('Commenti trovati:', snapshot.docs.length);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+      const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+      // Ordina i commenti per data di creazione lato client
+      return comments.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     } catch (error) {
       console.error('Errore recupero commenti:', error);
       return [];
