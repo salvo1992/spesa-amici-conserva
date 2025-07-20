@@ -82,6 +82,23 @@ const AuthForm = () => {
     setIsLoading(true);
 
     try {
+      // Se Firebase non è configurato, crea un utente di test
+      if (!firebaseAuth.isConfigured()) {
+        const testUser = {
+          uid: `user-${Date.now()}`,
+          email: registerForm.email,
+          name: registerForm.name
+        };
+        
+        toast({
+          title: "🎉 Registrazione completata!",
+          description: "Account creato con successo (modalità test)",
+        });
+        login(testUser);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await firebaseAuth.register(
         registerForm.email, 
         registerForm.password
@@ -98,9 +115,10 @@ const AuthForm = () => {
       });
       login(userData);
     } catch (error) {
+      console.error('Errore registrazione:', error);
       toast({
         title: "❌ Errore di registrazione",
-        description: "Non è stato possibile creare l'account",
+        description: "Non è stato possibile creare l'account. Riprova.",
         variant: "destructive"
       });
     } finally {
