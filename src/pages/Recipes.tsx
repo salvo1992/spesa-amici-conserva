@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const Recipes = () => {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -50,6 +52,32 @@ const Recipes = () => {
   useEffect(() => {
     localStorage.setItem('recipe-favorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Gestisce le ricette condivise tramite URL
+  useEffect(() => {
+    const addRecipeData = searchParams.get('add');
+    if (addRecipeData) {
+      try {
+        const recipeToAdd = JSON.parse(decodeURIComponent(addRecipeData));
+        const confirmed = window.confirm(`Vuoi aggiungere la ricetta "${recipeToAdd.name}" al tuo ricettario?`);
+        if (confirmed) {
+          createMutation.mutate(recipeToAdd);
+        }
+        // Rimuovi il parametro dall'URL
+        setSearchParams(prev => {
+          prev.delete('add');
+          return prev;
+        });
+      } catch (error) {
+        console.error('Errore nel parsing della ricetta condivisa:', error);
+        toast({
+          title: "⚠️ Errore",
+          description: "Impossibile aggiungere la ricetta condivisa",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [searchParams, setSearchParams]);
 
   // Ricette di default migliorate - 15 ricette totali
   const defaultRecipes: Recipe[] = [
@@ -418,45 +446,66 @@ const Recipes = () => {
   });
 
   const handleShareRecipe = (recipe: Recipe, platform?: string) => {
-    const appName = "Food Manager - Il Vikingo del Web";
+    const appName = "Food Manager 🍽️";
     const appUrl = window.location.origin;
-    const downloadMessage = "\n\n📲 Scarica l'app per salvare e organizzare le tue ricette preferite!";
-    const text = `🍽️ ${appName}\n\n📝 Ricetta: ${recipe.name}\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min | 👥 Porzioni: ${recipe.servings}${downloadMessage}\n\n📱 Visita: ${appUrl}`;
+    const recipeUrl = `${appUrl}/recipes?shared=${recipe.id}`;
+    
+    // Testo migliorato per i social
+    const socialText = `🌟 Ho trovato una ricetta fantastica che devi assolutamente provare! 🌟
+
+🍽️ ${recipe.name}
+
+✨ ${recipe.description}
+
+⏱️ Tempo di preparazione: ${recipe.prep_time} minuti
+👥 Porzioni: ${recipe.servings}
+
+🔥 Ingredients principali:
+${recipe.ingredients.slice(0, 3).map(ing => `• ${ing}`).join('\n')}
+${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
+
+📱 Scarica Food Manager per salvare questa e migliaia di altre ricette!
+🎯 Organizza la tua cucina, pianifica i pasti e crea la tua lista della spesa automaticamente!
+
+${appUrl}
+
+#ricette #foodmanager #cucina #cooking`;
     
     if (platform) {
       let shareUrl = '';
       switch (platform) {
         case 'facebook':
-          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}&quote=${encodeURIComponent(text)}`;
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}&quote=${encodeURIComponent(socialText)}`;
           break;
         case 'twitter':
-          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+          const twitterText = `🌟 ${recipe.name} - Una ricetta da provare!\n\n⏱️ ${recipe.prep_time} min | 👥 ${recipe.servings} porzioni\n\n📱 Scopri Food Manager per organizzare tutte le tue ricette!\n\n${recipeUrl}`;
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
           break;
         case 'whatsapp':
-          shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+          const whatsappText = `🍽️ *${recipe.name}*\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min\n👥 Porzioni: ${recipe.servings}\n\n📱 Scarica Food Manager per vedere la ricetta completa e organizzare la tua cucina!\n\n${recipeUrl}`;
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
           break;
         case 'telegram':
-          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`;
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(recipeUrl)}&text=${encodeURIComponent(socialText)}`;
           break;
         case 'instagram':
-          // Per Instagram, copia negli appunti e mostra istruzioni
+          const instagramText = `🌟 ${recipe.name} 🌟\n\n${recipe.description}\n\n⏱️ ${recipe.prep_time} min | 👥 ${recipe.servings} porzioni\n\n📱 Trova questa ricetta su Food Manager!\nLink in bio 👆\n\n#ricette #foodmanager #cucina #cooking`;
           if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(() => {
+            navigator.clipboard.writeText(instagramText).then(() => {
               toast({
-                title: "Testo copiato!",
-                description: "Apri Instagram e incolla il testo nel tuo post o story"
+                title: "✨ Testo copiato per Instagram!",
+                description: "Apri Instagram, crea un post e incolla il testo"
               });
             }).catch(() => {
-              // Fallback se il clipboard non funziona
               const textArea = document.createElement('textarea');
-              textArea.value = text;
+              textArea.value = instagramText;
               document.body.appendChild(textArea);
               textArea.select();
               document.execCommand('copy');
               document.body.removeChild(textArea);
               toast({
-                title: "Testo copiato!",
-                description: "Apri Instagram e incolla il testo nel tuo post o story"
+                title: "✨ Testo copiato per Instagram!",
+                description: "Apri Instagram, crea un post e incolla il testo"
               });
             });
           }
@@ -473,22 +522,21 @@ const Recipes = () => {
     } else {
       // Condivisione diretta (copia negli appunti)
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => {
+        navigator.clipboard.writeText(socialText).then(() => {
           toast({
-            title: "Ricetta condivisa!",
-            description: "Testo copiato con invito a scaricare l'app"
+            title: "🎉 Ricetta condivisa!",
+            description: "Testo perfetto copiato negli appunti!"
           });
         }).catch(() => {
-          // Fallback se il clipboard non funziona
           const textArea = document.createElement('textarea');
-          textArea.value = text;
+          textArea.value = socialText;
           document.body.appendChild(textArea);
           textArea.select();
           document.execCommand('copy');
           document.body.removeChild(textArea);
           toast({
-            title: "Ricetta condivisa!",
-            description: "Testo copiato con invito a scaricare l'app"
+            title: "🎉 Ricetta condivisa!",
+            description: "Testo perfetto copiato negli appunti!"
           });
         });
       }
@@ -577,11 +625,47 @@ const Recipes = () => {
   const handleShareByEmail = () => {
     if (!shareEmail.trim() || !selectedRecipe) return;
     
-    // Qui andrebbe implementata la logica per inviare via email
-    // Per ora simulo l'invio
+    const subject = `🍽️ ${selectedRecipe.name} - Ricetta da Food Manager`;
+    const body = `Ciao!
+
+Ho pensato che questa ricetta ti potrebbe interessare:
+
+🌟 **${selectedRecipe.name}**
+
+${selectedRecipe.description}
+
+⏱️ Tempo di preparazione: ${selectedRecipe.prep_time} minuti
+👥 Porzioni: ${selectedRecipe.servings}
+
+🔥 **Ingredienti:**
+${selectedRecipe.ingredients.map(ing => `• ${ing}`).join('\n')}
+
+📝 **Preparazione:**
+${selectedRecipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n\n')}
+
+---
+
+📱 **Vuoi aggiungere questa ricetta al tuo Food Manager?**
+Clicca qui per aggiungerla automaticamente: ${window.location.origin}/recipes?add=${encodeURIComponent(JSON.stringify({
+      name: selectedRecipe.name,
+      description: selectedRecipe.description,
+      ingredients: selectedRecipe.ingredients,
+      instructions: selectedRecipe.instructions,
+      prep_time: selectedRecipe.prep_time,
+      servings: selectedRecipe.servings,
+      category: selectedRecipe.category
+    }))}
+
+Se non hai ancora Food Manager, scaricalo gratuitamente: ${window.location.origin}
+
+Buona cucina! 🍳`;
+
+    const mailtoUrl = `mailto:${shareEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, '_blank');
+    
     toast({
-      title: "Ricetta condivisa!",
-      description: `Ricetta inviata a ${shareEmail}`
+      title: "📧 Email preparata!",
+      description: `Email di condivisione aperta per ${shareEmail}`
     });
     setShareEmail('');
     setShowShareDialog(false);
