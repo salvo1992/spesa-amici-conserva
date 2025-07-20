@@ -304,34 +304,36 @@ const SharedListDetail = () => {
   const completedItems = sharedList.items.filter((item: any) => item.completed).length;
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div className="p-2 sm:p-4 space-y-4 sm:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-blue-200/50 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-3 sm:p-6 shadow-xl border border-blue-200/50 animate-fade-in">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/shared')}
-            className="hover:bg-blue-50 rounded-xl"
+            className="hover:bg-blue-50 rounded-xl self-start"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Indietro
           </Button>
           
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
             <Button 
               onClick={() => setShowMembersDialog(true)}
               variant="outline"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl"
+              size="sm"
+              className="border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl text-xs sm:text-sm"
             >
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Membri ({sharedList.members.length})
             </Button>
             
             <Button 
               onClick={() => setShowShareDialog(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-xl"
+              size="sm"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-xl text-xs sm:text-sm"
             >
-              <Share2 className="h-4 w-4 mr-2" />
+              <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Condividi
             </Button>
             
@@ -370,21 +372,21 @@ const SharedListDetail = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <TypeIcon className="h-10 w-10 text-blue-600 animate-pulse" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="relative self-center sm:self-auto">
+            <TypeIcon className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600 animate-pulse" />
             <div className="absolute -inset-1 bg-blue-200/50 rounded-full animate-ping"></div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-800 bg-clip-text text-transparent">
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-800 bg-clip-text text-transparent">
               {sharedList.name}
             </h1>
-            <div className="flex gap-2 mt-2">
-              <Badge className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border border-blue-200 rounded-full">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
+              <Badge className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border border-blue-200 rounded-full text-xs">
                 {sharedList.type === 'shopping' ? '🛒 Lista Spesa' : '📦 Dispensa'}
               </Badge>
               {sharedList.owner_id === 'default' && (
-                <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 rounded-full">
+                <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 rounded-full text-xs">
                   ✨ Esempio
                 </Badge>
               )}
@@ -392,17 +394,17 @@ const SharedListDetail = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-6 mt-4 text-sm text-gray-600">
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6 mt-4 text-xs sm:text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-blue-500" />
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
             <span>{sharedList.members.length} membri</span>
           </div>
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
             <span>{new Date(sharedList.created_at).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
             <span>{completedItems}/{sharedList.items.length} completati</span>
           </div>
         </div>
