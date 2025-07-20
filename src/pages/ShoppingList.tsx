@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Plus, Trash2, Check, X, Share2, Package, MessageCircle, Sparkles } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Check, X, Share2, Package, MessageCircle, Sparkles, Edit, Euro } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,8 @@ const ShoppingList = () => {
     priority: 'media' as 'alta' | 'media' | 'bassa',
     cost: 0
   });
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Carica gli item della lista spesa all'avvio
   useEffect(() => {
@@ -158,6 +160,66 @@ const ShoppingList = () => {
     });
   };
 
+  const handleEditItem = (item: ShoppingItem) => {
+    setEditingItem(item);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editingItem || !editingItem.name.trim()) {
+      toast({
+        title: "⚠️ Errore",
+        description: "Inserisci il nome del prodotto",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await firebaseApi.updateShoppingItem(editingItem.id, {
+        name: editingItem.name,
+        quantity: editingItem.quantity,
+        category: editingItem.category,
+        priority: editingItem.priority,
+        cost: editingItem.cost
+      });
+
+      toast({
+        title: "✅ Prodotto aggiornato",
+        description: "Il prodotto è stato modificato con successo"
+      });
+      
+      setShowEditDialog(false);
+      setEditingItem(null);
+      loadShoppingItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiornare il prodotto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    try {
+      await firebaseApi.deleteShoppingItem(itemId);
+      
+      toast({
+        title: "🗑️ Prodotto eliminato",
+        description: `${itemName} è stato rimosso dalla lista`
+      });
+      
+      loadShoppingItems();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile eliminare il prodotto",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleAddItem = async () => {
     if (!isAuthenticated) {
       toast({
@@ -208,6 +270,10 @@ const ShoppingList = () => {
 
   const completedCount = Object.values(checkedItems).filter(Boolean).length;
   const totalCount = items.length;
+  
+  // Calcola il totale dei prodotti non completati
+  const uncheckedItems = items.filter(item => !checkedItems[item.id]);
+  const totalCost = uncheckedItems.reduce((sum, item) => sum + item.cost, 0);
 
   if (!isAuthenticated) {
     return (
@@ -255,6 +321,10 @@ const ShoppingList = () => {
             <Badge variant="outline" className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 text-green-700 dark:text-green-300 border-green-300 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">
               <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               {completedCount}/{totalCount} completati
+            </Badge>
+            <Badge variant="outline" className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-700 dark:text-blue-300 border-blue-300 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">
+              <Euro className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Totale: €{totalCost.toFixed(2)}
             </Badge>
             <Button variant="outline" size="sm" onClick={handleWhatsAppShare} className="hover:scale-105 transition-all duration-300 hover:shadow-lg border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-xs sm:text-sm">
               <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-green-600" />
@@ -316,7 +386,20 @@ const ShoppingList = () => {
                               <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               <span className="hidden xs:inline">Dispensa</span>
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-105 transition-all duration-300 px-2 py-1 h-8">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:scale-105 transition-all duration-300 px-2 py-1 h-8"
+                              onClick={() => handleEditItem(item)}
+                            >
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-105 transition-all duration-300 px-2 py-1 h-8"
+                              onClick={() => handleDeleteItem(item.id, item.name)}
+                            >
                               <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </div>
@@ -478,6 +561,118 @@ const ShoppingList = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog per modifica prodotto */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                ✏️ Modifica Prodotto
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Modifica i dettagli del prodotto selezionato
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingItem && (
+              <div className="space-y-6 mt-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-name" className="text-sm font-semibold">Nome Prodotto</Label>
+                  <Input
+                    id="edit-item-name"
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                    placeholder="Es. Latte, Pane, Frutta..."
+                    className="transition-all duration-300 focus:scale-105 focus:shadow-lg"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-category" className="text-sm font-semibold">Categoria</Label>
+                  <Select value={editingItem.category} onValueChange={(value) => setEditingItem({...editingItem, category: value})}>
+                    <SelectTrigger className="transition-all duration-300 hover:scale-105">
+                      <SelectValue placeholder="Seleziona categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Frutta e Verdura">🥬 Frutta e Verdura</SelectItem>
+                      <SelectItem value="Carne e Pesce">🥩 Carne e Pesce</SelectItem>
+                      <SelectItem value="Latticini">🥛 Latticini</SelectItem>
+                      <SelectItem value="Cereali e Pasta">🍝 Cereali e Pasta</SelectItem>
+                      <SelectItem value="Pane e Dolci">🍞 Pane e Dolci</SelectItem>
+                      <SelectItem value="Bevande">🥤 Bevande</SelectItem>
+                      <SelectItem value="Condimenti">🫒 Condimenti</SelectItem>
+                      <SelectItem value="Surgelati">🧊 Surgelati</SelectItem>
+                      <SelectItem value="Conserve">🥫 Conserve</SelectItem>
+                      <SelectItem value="Pulizia Casa">🧽 Pulizia Casa</SelectItem>
+                      <SelectItem value="Igiene Personale">🧴 Igiene Personale</SelectItem>
+                      <SelectItem value="Altro">📦 Altro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-item-quantity" className="text-sm font-semibold">Quantità</Label>
+                    <Input
+                      id="edit-item-quantity"
+                      value={editingItem.quantity}
+                      onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
+                      placeholder="1 kg, 2 pz..."
+                      className="transition-all duration-300 focus:scale-105"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-item-cost" className="text-sm font-semibold">Prezzo (€)</Label>
+                    <Input
+                      id="edit-item-cost"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingItem.cost}
+                      onChange={(e) => setEditingItem({...editingItem, cost: parseFloat(e.target.value) || 0})}
+                      placeholder="0.00"
+                      className="transition-all duration-300 focus:scale-105"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-priority" className="text-sm font-semibold">Priorità</Label>
+                  <Select value={editingItem.priority} onValueChange={(value: 'alta' | 'media' | 'bassa') => setEditingItem({...editingItem, priority: value})}>
+                    <SelectTrigger className="transition-all duration-300 hover:scale-105">
+                      <SelectValue placeholder="Seleziona priorità" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta">🔴 Alta</SelectItem>
+                      <SelectItem value="media">🟡 Media</SelectItem>
+                      <SelectItem value="bassa">🟢 Bassa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={handleUpdateItem}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Salva Modifiche
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setEditingItem(null);
+                    }}
+                    className="transition-all duration-300 hover:scale-105"
+                  >
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
