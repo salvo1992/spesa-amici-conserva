@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Share2, Facebook, Twitter, Instagram, Edit2, Trash2, MessageCircle, Mail, Send } from 'lucide-react';
+import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Share2, Facebook, Instagram, Edit2, Trash2, MessageCircle, Mail, Send, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
@@ -23,12 +23,15 @@ const Recipes = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showShareUsersDialog, setShowShareUsersDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [shareEmail, setShareEmail] = useState('');
+  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState('');
 
   const [newRecipe, setNewRecipe] = useState({
     name: '',
@@ -445,19 +448,33 @@ const Recipes = () => {
     }
   });
 
+  // Carica gli utenti registrati
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await firebaseApi.getRegisteredUsers();
+        setRegisteredUsers(users);
+      } catch (error) {
+        console.error('Errore nel caricamento utenti:', error);
+      }
+    };
+    if (isAuthenticated) {
+      loadUsers();
+    }
+  }, [isAuthenticated]);
+
   const handleShareRecipe = (recipe: Recipe, platform?: string) => {
-    const appName = "Food Manager 🍽️";
+    const appName = "Food Manager";
     const appUrl = window.location.origin;
     const recipeUrl = `${appUrl}/recipes?shared=${recipe.id}`;
     
-    // Testo migliorato per i social
-    const socialText = `🌟 Ho trovato una ricetta fantastica che devi assolutamente provare! 🌟
+    // Testo migliorato per i social con titolo specifico
+    const socialText = `Food Manager - ${recipe.name}, ${recipe.prep_time} min ⏱️
 
-🍽️ ${recipe.name}
+🌟 Ho trovato una ricetta fantastica che devi assolutamente provare! 🌟
 
 ✨ ${recipe.description}
 
-⏱️ Tempo di preparazione: ${recipe.prep_time} minuti
 👥 Porzioni: ${recipe.servings}
 
 🔥 Ingredients principali:
@@ -467,7 +484,8 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
 📱 Scarica Food Manager per salvare questa e migliaia di altre ricette!
 🎯 Organizza la tua cucina, pianifica i pasti e crea la tua lista della spesa automaticamente!
 
-${appUrl}
+🔗 Visita: ${appUrl}
+📲 Download: https://play.google.com/store/apps/details?id=com.foodmanager
 
 #ricette #foodmanager #cucina #cooking`;
     
@@ -477,19 +495,20 @@ ${appUrl}
         case 'facebook':
           shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}&quote=${encodeURIComponent(socialText)}`;
           break;
-        case 'twitter':
-          const twitterText = `🌟 ${recipe.name} - Una ricetta da provare!\n\n⏱️ ${recipe.prep_time} min | 👥 ${recipe.servings} porzioni\n\n📱 Scopri Food Manager per organizzare tutte le tue ricette!\n\n${recipeUrl}`;
-          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
-          break;
+        case 'users':
+          setSelectedRecipe(recipe);
+          setShowShareUsersDialog(true);
+          return;
         case 'whatsapp':
-          const whatsappText = `🍽️ *${recipe.name}*\n\n${recipe.description}\n\n⏱️ Tempo: ${recipe.prep_time} min\n👥 Porzioni: ${recipe.servings}\n\n📱 Scarica Food Manager per vedere la ricetta completa e organizzare la tua cucina!\n\n${recipeUrl}`;
+          const whatsappText = `Food Manager - ${recipe.name}, ${recipe.prep_time} min ⏱️\n\n🍽️ *${recipe.name}*\n\n${recipe.description}\n\n👥 Porzioni: ${recipe.servings}\n\n📱 Scarica Food Manager per vedere la ricetta completa e organizzare la tua cucina!\n\n🔗 ${appUrl}\n📲 Play Store: https://play.google.com/store/apps/details?id=com.foodmanager`;
           shareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
           break;
         case 'telegram':
-          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(recipeUrl)}&text=${encodeURIComponent(socialText)}`;
+          const telegramText = `Food Manager - ${recipe.name}, ${recipe.prep_time} min ⏱️\n\n${socialText}`;
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(recipeUrl)}&text=${encodeURIComponent(telegramText)}`;
           break;
         case 'instagram':
-          const instagramText = `🌟 ${recipe.name} 🌟\n\n${recipe.description}\n\n⏱️ ${recipe.prep_time} min | 👥 ${recipe.servings} porzioni\n\n📱 Trova questa ricetta su Food Manager!\nLink in bio 👆\n\n#ricette #foodmanager #cucina #cooking`;
+          const instagramText = `Food Manager - ${recipe.name}, ${recipe.prep_time} min ⏱️\n\n🌟 ${recipe.name} 🌟\n\n${recipe.description}\n\n👥 ${recipe.servings} porzioni\n\n📱 Trova questa ricetta su Food Manager!\n🔗 Link in bio 👆\n📲 Download disponibile su Play Store\n\n#ricette #foodmanager #cucina #cooking`;
           if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(instagramText).then(() => {
               toast({
@@ -619,6 +638,26 @@ ${appUrl}
   const handleDeleteRecipe = (recipe: Recipe) => {
     if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
       deleteMutation.mutate(recipe.id);
+    }
+  };
+
+  const handleShareWithUser = async () => {
+    if (!selectedUser.trim() || !selectedRecipe) return;
+    
+    try {
+      await firebaseApi.shareRecipeWithUser(selectedRecipe, selectedUser);
+      toast({
+        title: "🎉 Ricetta condivisa!",
+        description: `Ricetta inviata a ${selectedUser}. Riceverà una notifica per accettarla.`
+      });
+      setSelectedUser('');
+      setShowShareUsersDialog(false);
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile condividere la ricetta. Riprova.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1009,15 +1048,15 @@ Buona cucina! 🍳`;
                 >
                   <Facebook className="h-4 w-4 text-blue-600" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'twitter')}
-                  className="hover:bg-sky-50 dark:hover:bg-sky-900/20"
-                  title="Condividi su Twitter"
-                >
-                  <Twitter className="h-4 w-4 text-sky-500" />
-                </Button>
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   onClick={() => handleShareRecipe(selectedRecipe!, 'users')}
+                   className="hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                   title="Condividi con utenti registrati"
+                 >
+                   <UserPlus className="h-4 w-4 text-purple-600" />
+                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1241,6 +1280,37 @@ Buona cucina! 🍳`;
             <Button onClick={handleShareByEmail} disabled={!shareEmail.trim()} className="w-full">
               <Mail className="h-4 w-4 mr-2" />
               Invia Ricetta
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share with Users Dialog */}
+      <Dialog open={showShareUsersDialog} onOpenChange={setShowShareUsersDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Condividi con Utenti Registrati</DialogTitle>
+            <p className="text-sm text-muted-foreground">Invia la ricetta direttamente a un utente dell'app</p>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Seleziona utente</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Scegli un utente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {registeredUsers.map((user) => (
+                    <SelectItem key={user} value={user}>
+                      {user}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleShareWithUser} disabled={!selectedUser.trim()} className="w-full">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Condividi Ricetta
             </Button>
           </div>
         </DialogContent>

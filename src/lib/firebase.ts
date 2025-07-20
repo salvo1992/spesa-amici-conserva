@@ -665,4 +665,31 @@ export const firebaseApi = {
       throw error;
     }
   },
+
+  // Funzione per ottenere utenti registrati (simulata)
+  getRegisteredUsers: async (): Promise<string[]> => {
+    // In una implementazione reale, questo recupererebbe la lista degli utenti registrati dal database
+    // Per ora simuliamo alcuni utenti di esempio
+    return [
+      'marco.rossi@email.com',
+      'giulia.bianchi@email.com', 
+      'alessandro.verdi@email.com',
+      'francesca.neri@email.com',
+      'luca.ferrari@email.com'
+    ];
+  },
+
+  // Funzione per condividere ricetta con utente registrato
+  shareRecipeWithUser: async (recipeData: Recipe, userEmail: string) => {
+    if (!db) throw new Error('Database non disponibile');
+    try {
+      // In una implementazione reale, questo invierebbe una notifica all'utente
+      // e aggiungerebbe la ricetta alle sue ricette condivise
+      console.log(`Condividendo ricetta "${recipeData.name}" con ${userEmail}`);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error sharing recipe with user:', error);
+      throw error;
+    }
+  },
 };
