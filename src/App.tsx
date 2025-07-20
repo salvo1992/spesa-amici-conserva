@@ -43,6 +43,7 @@ function App() {
         <LanguageProvider>
           <Router>
             <Routes>
+              <Route path="/login" element={<Index />} />
               <Route path="/" element={<LayoutWrapper />}>
                 <Route index element={<Dashboard />} />
                 <Route path="shopping-list" element={<ShoppingList />} />

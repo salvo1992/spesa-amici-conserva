@@ -114,11 +114,22 @@ const AuthForm = () => {
         description: "Il tuo account è stato creato con successo",
       });
       login(userData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Errore registrazione:', error);
+      
+      let errorMessage = "Non è stato possibile creare l'account";
+      
+      if (error.message === 'Email già in uso') {
+        errorMessage = "Questa email è già registrata. Prova ad accedere invece di registrarti.";
+      } else if (error.message === 'Password troppo debole') {
+        errorMessage = "La password deve essere di almeno 6 caratteri";
+      } else if (error.message === 'Email non valida') {
+        errorMessage = "L'indirizzo email non è valido";
+      }
+      
       toast({
-        title: "❌ Errore di registrazione",
-        description: "Non è stato possibile creare l'account. Riprova.",
+        title: "❌ Errore di registrazione", 
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
