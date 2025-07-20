@@ -41,20 +41,20 @@ const AddFamilyMemberModal: React.FC<AddFamilyMemberModalProps> = ({ onAddMember
           <span className="hidden xs:inline">Aggiungi</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-md mx-4 rounded-lg">
+      <DialogContent className="w-[90vw] max-w-sm mx-2 rounded-lg max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">Aggiungi un Membro della Famiglia</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Aggiungi Membro</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <div className="space-y-3 p-2">
           <Input
             placeholder="Nome del membro"
             value={memberName}
             onChange={(e) => setMemberName(e.target.value)}
-            className="w-full text-base"
+            className="w-full text-sm"
           />
           <Button 
             onClick={handleAddMember} 
-            className="w-full bg-gradient-to-r from-orange-600 to-red-600 h-12 text-base font-medium"
+            className="w-full bg-gradient-to-r from-orange-600 to-red-600 h-10 text-sm font-medium"
           >
             Aggiungi
           </Button>

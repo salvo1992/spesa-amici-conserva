@@ -190,7 +190,7 @@ const Settings = () => {
                           Accedi / Registrati
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent className="w-[90vw] max-w-sm mx-2 rounded-lg">
                         <AuthForm />
                       </DialogContent>
                     </Dialog>

@@ -89,7 +89,7 @@ const AddMealModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto mx-4 rounded-lg">
+      <DialogContent className="w-[90vw] max-w-3xl max-h-[85vh] overflow-y-auto mx-2 rounded-lg">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <Utensils className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
@@ -113,7 +113,7 @@ const AddMealModal = ({
               />
             </div>
             
-            <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
               {filteredRecipes.length > 0 ? (
                 filteredRecipes.map((recipe) => (
                   <div 
