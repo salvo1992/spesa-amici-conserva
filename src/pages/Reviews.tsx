@@ -17,6 +17,7 @@ const Reviews = () => {
   const queryClient = useQueryClient();
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showComments, setShowComments] = useState<{[key: string]: boolean}>({});
+  const [showAllComments, setShowAllComments] = useState<{[key: string]: boolean}>({});
   const [newComment, setNewComment] = useState<{[key: string]: string}>({});
   const [newReview, setNewReview] = useState({
     product_name: '',
@@ -88,6 +89,25 @@ const Reviews = () => {
       toast({
         title: "Commento aggiunto",
         description: "Il tuo commento è stato pubblicato"
+      });
+    }
+  });
+
+  // Mutation per eliminare recensioni
+  const deleteReviewMutation = useMutation({
+    mutationFn: firebaseApi.deleteReview,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      toast({
+        title: "Recensione eliminata",
+        description: "La recensione è stata rimossa con successo"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare la recensione",
+        variant: "destructive"
       });
     }
   });
@@ -235,8 +255,21 @@ const Reviews = () => {
     deleteCommentMutation.mutate(commentId);
   };
 
+  const handleDeleteReview = (reviewId: string) => {
+    if (window.confirm('Sei sicuro di voler eliminare questa recensione?')) {
+      deleteReviewMutation.mutate(reviewId);
+    }
+  };
+
   const toggleComments = (reviewId: string) => {
     setShowComments(prev => ({
+      ...prev,
+      [reviewId]: !prev[reviewId]
+    }));
+  };
+
+  const toggleAllComments = (reviewId: string) => {
+    setShowAllComments(prev => ({
       ...prev,
       [reviewId]: !prev[reviewId]
     }));
@@ -336,16 +369,30 @@ const Reviews = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleComments(review.id)}
+                        onClick={() => comments.length > 3 ? toggleAllComments(review.id) : toggleComments(review.id)}
                         className="flex items-center gap-2 text-gray-500 hover:text-green-600"
                       >
                         <MessageSquare className="h-4 w-4" />
                         <span className="text-sm">Commenta ({comments.length})</span>
                       </Button>
+
+                      {/* Bottone Elimina Post - visibile solo al proprietario */}
+                      {review.user_id === user?.uid && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteReview(review.id)}
+                          className="flex items-center gap-2 text-red-500 hover:text-red-600"
+                          disabled={deleteReviewMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="text-sm">Elimina Post</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Sezione Commenti */}
+                  {/* Sezione Commenti - Visualizzazione limitata */}
                   {showComments[review.id] && (
                     <div className="mt-4 border-t pt-4">
                       <div className="space-y-3">
@@ -353,6 +400,87 @@ const Reviews = () => {
                           <div className="text-center text-sm text-gray-500">Caricamento commenti...</div>
                         )}
                         
+                        {/* Mostra solo i primi 3 commenti */}
+                        {comments.slice(0, 3).map((comment) => (
+                          <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {comment.user_name}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(comment.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {comment.comment}
+                                </p>
+                              </div>
+                              {comment.user_id === user?.uid && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                                  disabled={deleteCommentMutation.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Mostra link per vedere tutti i commenti se ce ne sono più di 3 */}
+                        {comments.length > 3 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleAllComments(review.id)}
+                            className="w-full text-green-600 hover:text-green-700"
+                          >
+                            Vedi tutti i {comments.length} commenti
+                          </Button>
+                        )}
+                        
+                        {/* Form per nuovo commento */}
+                        <div className="flex gap-2 mt-3">
+                          <Input
+                            placeholder="Scrivi un commento..."
+                            value={newComment[review.id] || ''}
+                            onChange={(e) => setNewComment(prev => ({
+                              ...prev,
+                              [review.id]: e.target.value
+                            }))}
+                            className="flex-1"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleAddComment(review.id);
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddComment(review.id)}
+                            disabled={!newComment[review.id]?.trim() || createCommentMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {createCommentMutation.isPending ? 'Invio...' : 'Invia'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modale per visualizzare tutti i commenti */}
+                  <Dialog open={showAllComments[review.id]} onOpenChange={() => toggleAllComments(review.id)}>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                      <DialogHeader>
+                        <DialogTitle>Tutti i commenti per "{review.product_name}"</DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                         {comments.map((comment) => (
                           <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                             <div className="flex items-start justify-between">
@@ -383,9 +511,11 @@ const Reviews = () => {
                             </div>
                           </div>
                         ))}
-                        
-                        {/* Form per nuovo commento */}
-                        <div className="flex gap-2 mt-3">
+                      </div>
+
+                      {/* Form per nuovo commento nella modale */}
+                      <div className="border-t pt-4 mt-4">
+                        <div className="flex gap-2">
                           <Input
                             placeholder="Scrivi un commento..."
                             value={newComment[review.id] || ''}
@@ -410,8 +540,8 @@ const Reviews = () => {
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    </DialogContent>
+                  </Dialog>
                 </CardContent>
               </Card>
             );
