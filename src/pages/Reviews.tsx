@@ -86,6 +86,7 @@ const Reviews = () => {
     mutationFn: firebaseApi.createComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] });
+      queryClient.invalidateQueries({ queryKey: ['allComments'] });
       toast({
         title: "Commento aggiunto",
         description: "Il tuo commento è stato pubblicato"
@@ -117,6 +118,7 @@ const Reviews = () => {
     mutationFn: firebaseApi.deleteComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] });
+      queryClient.invalidateQueries({ queryKey: ['allComments'] });
       toast({
         title: "Commento eliminato",
         description: "Il commento è stato rimosso"
@@ -124,14 +126,23 @@ const Reviews = () => {
     }
   });
 
-  // Hook per i commenti di ogni recensione
-  const useComments = (reviewId: string) => {
-    return useQuery({
-      queryKey: ['comments', reviewId],
-      queryFn: () => firebaseApi.getComments(reviewId),
-      enabled: showComments[reviewId] === true
-    });
-  };
+  // Query per ottenere tutti i commenti delle recensioni visibili
+  const { data: allComments = {} } = useQuery({
+    queryKey: ['allComments', Object.keys(showComments)],
+    queryFn: async () => {
+      const commentsData: {[key: string]: Comment[]} = {};
+      const visibleReviewIds = Object.keys(showComments).filter(id => showComments[id]);
+      
+      await Promise.all(
+        visibleReviewIds.map(async (reviewId) => {
+          commentsData[reviewId] = await firebaseApi.getComments(reviewId);
+        })
+      );
+      
+      return commentsData;
+    },
+    enabled: Object.values(showComments).some(Boolean) || Object.values(showAllComments).some(Boolean)
+  });
 
   // Recensioni di default con descrizioni migliorate
   const defaultReviews: Review[] = [
@@ -307,8 +318,7 @@ const Reviews = () => {
 
         <div className="grid gap-4 md:gap-6">
           {allReviews.map((review) => {
-            const commentsQuery = useComments(review.id);
-            const comments = commentsQuery.data || [];
+            const comments = allComments[review.id] || [];
             
             return (
               <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-green-500 animate-scale-in">
@@ -407,9 +417,6 @@ const Reviews = () => {
                   {showComments[review.id] && (
                     <div className="mt-4 border-t pt-4">
                       <div className="space-y-3">
-                        {commentsQuery.isLoading && (
-                          <div className="text-center text-sm text-gray-500">Caricamento commenti...</div>
-                        )}
                         
                         {/* Mostra solo i primi 3 commenti */}
                         {comments.slice(0, 3).map((comment) => (
