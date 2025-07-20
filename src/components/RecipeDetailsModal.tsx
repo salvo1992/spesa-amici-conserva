@@ -4,9 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Clock, Users, ChefHat, ShoppingCart, Share2, Star, Facebook, Instagram, Search, Edit, Trash2, Send } from 'lucide-react';
+import { Clock, Users, ChefHat, ShoppingCart, Share2, Star, Facebook, Instagram, Search, Edit, Trash2, Send, MessageCircle, Phone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { searchUsers, shareRecipeWithUser } from '@/lib/firebase';
+import { searchUsers, shareRecipeWithUser, firebaseApi } from '@/lib/firebase';
 
 import { Recipe } from '@/lib/firebase';
 
@@ -37,12 +37,20 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
   const [loading, setLoading] = useState(false);
   if (!recipe) return null;
 
-  const handleAddToShoppingList = () => {
-    onAddToShoppingList(recipe.ingredients);
-    toast({
-      title: "Ingredienti aggiunti!",
-      description: `${recipe.ingredients.length} ingredienti aggiunti alla lista della spesa`,
-    });
+  const handleAddToShoppingList = async () => {
+    try {
+      await firebaseApi.addIngredientsToShoppingList(recipe.ingredients);
+      toast({
+        title: "Ingredienti aggiunti!",
+        description: `${recipe.ingredients.length} ingredienti aggiunti alla lista della spesa`,
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Errore nell'aggiunta degli ingredienti alla lista della spesa",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleShare = () => {
@@ -107,6 +115,35 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
             toast({
               title: "Testo copiato!",
               description: "Apri Instagram e incolla il testo nel tuo post o story"
+            });
+          });
+        }
+        return;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'discord':
+        // Discord non ha URL sharing diretto, copiamo negli appunti
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(() => {
+            toast({
+              title: "Testo copiato!",
+              description: "Apri Discord e incolla il testo nel canale desiderato"
+            });
+          }).catch(() => {
+            // Fallback se il clipboard non funziona
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            toast({
+              title: "Testo copiato!",
+              description: "Apri Discord e incolla il testo nel canale desiderato"
             });
           });
         }
@@ -253,20 +290,41 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
           {/* Social Share - Posizionato dopo la descrizione per mobile */}
           <div className="block md:hidden border-t pt-4">
             <h3 className="text-lg font-semibold mb-4 text-center">Condividi sui social</h3>
-            <div className="flex gap-3 justify-center">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={() => handleSocialShare('facebook')}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Facebook className="h-4 w-4 mr-2" />
                 Facebook
               </Button>
               <Button
                 onClick={() => handleSocialShare('instagram')}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex-1"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
               >
                 <Instagram className="h-4 w-4 mr-2" />
                 Instagram
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('whatsapp')}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                WhatsApp
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('telegram')}
+                className="bg-sky-500 hover:bg-sky-600 text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Telegram
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('discord')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white col-span-2"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Discord
               </Button>
             </div>
           </div>
@@ -317,20 +375,41 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
           {/* Social Share - Solo per desktop */}
           <div className="hidden md:block border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Condividi sui social</h3>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 onClick={() => handleSocialShare('facebook')}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Facebook className="h-4 w-4 mr-2" />
                 Facebook
               </Button>
               <Button
                 onClick={() => handleSocialShare('instagram')}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex-1"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
               >
                 <Instagram className="h-4 w-4 mr-2" />
                 Instagram
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('whatsapp')}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                WhatsApp
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('telegram')}
+                className="bg-sky-500 hover:bg-sky-600 text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Telegram
+              </Button>
+              <Button
+                onClick={() => handleSocialShare('discord')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Discord
               </Button>
             </div>
           </div>

@@ -246,6 +246,23 @@ export const firebaseApi = {
     });
   },
 
+  addIngredientsToShoppingList: async (ingredients: string[]) => {
+    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    const promises = ingredients.map(ingredient => 
+      addDoc(collection(db, 'shopping_items'), {
+        name: ingredient,
+        quantity: '1',
+        category: 'Altro',
+        priority: 'media' as const,
+        cost: 0,
+        completed: false,
+        user_id: auth.currentUser.uid,
+        created_at: new Date().toISOString()
+      })
+    );
+    return await Promise.all(promises);
+  },
+
   updateShoppingItem: async (id: string, data: Partial<ShoppingItem>) => {
     if (!db) throw new Error('Database non disponibile');
     const docRef = doc(db, 'shopping_items', id);
@@ -696,21 +713,40 @@ export const firebaseApi = {
 
 // Funzioni aggiuntive per ricerca utenti e condivisione ricette
 export const searchUsers = async (searchQuery: string) => {
-  if (!db) return [];
+  if (!db) {
+    // Simulazione ricerca utenti quando Firebase non è configurato
+    const allUsers = [
+      { id: 'user1', firstName: 'Marco', lastName: 'Rossi' },
+      { id: 'user2', firstName: 'Giulia', lastName: 'Bianchi' },
+      { id: 'user3', firstName: 'Alessandro', lastName: 'Verdi' },
+      { id: 'user4', firstName: 'Francesca', lastName: 'Neri' },
+      { id: 'user5', firstName: 'Luca', lastName: 'Ferrari' }
+    ];
+    
+    return allUsers.filter(user => 
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
   
-  // Simulazione ricerca utenti - in realtà cercherebbe nel database
-  const allUsers = [
-    { id: 'user1', firstName: 'Marco', lastName: 'Rossi' },
-    { id: 'user2', firstName: 'Giulia', lastName: 'Bianchi' },
-    { id: 'user3', firstName: 'Alessandro', lastName: 'Verdi' },
-    { id: 'user4', firstName: 'Francesca', lastName: 'Neri' },
-    { id: 'user5', firstName: 'Luca', lastName: 'Ferrari' }
-  ];
-  
-  return allUsers.filter(user => 
-    user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  try {
+    // Cerca tra gli utenti registrati nel database
+    const q = query(collection(db, 'users'));
+    const snapshot = await getDocs(q);
+    const users = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      firstName: doc.data().firstName || doc.data().name?.split(' ')[0] || 'Utente',
+      lastName: doc.data().lastName || doc.data().name?.split(' ')[1] || ''
+    }));
+    
+    return users.filter(user => 
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  } catch (error) {
+    console.error('Errore nella ricerca utenti:', error);
+    return [];
+  }
 };
 
 export const shareRecipeWithUser = async (recipeId: string, targetUserId: string) => {

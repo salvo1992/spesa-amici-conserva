@@ -617,9 +617,9 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
   const handleUpdateRecipe = () => {
     if (!editingRecipe || !editingRecipe.name.trim()) return;
     
-    updateMutation.mutate({
-      id: editingRecipe.id,
-      recipe: {
+    if (editingRecipe.user_id === 'default') {
+      // Se è una ricetta di default, creiamo una nuova ricetta personalizzata
+      createMutation.mutate({
         name: editingRecipe.name,
         description: editingRecipe.description,
         ingredients: editingRecipe.ingredients.filter(i => i.trim()),
@@ -627,8 +627,22 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
         prep_time: editingRecipe.prep_time,
         servings: editingRecipe.servings,
         category: editingRecipe.category || 'Altro'
-      }
-    });
+      });
+    } else {
+      // Se è una ricetta dell'utente, aggiorniamola normalmente
+      updateMutation.mutate({
+        id: editingRecipe.id,
+        recipe: {
+          name: editingRecipe.name,
+          description: editingRecipe.description,
+          ingredients: editingRecipe.ingredients.filter(i => i.trim()),
+          instructions: editingRecipe.instructions.filter(i => i.trim()),
+          prep_time: editingRecipe.prep_time,
+          servings: editingRecipe.servings,
+          category: editingRecipe.category || 'Altro'
+        }
+      });
+    }
   };
 
   const handleDeleteDefaultRecipe = (recipeId: string) => {
