@@ -236,29 +236,29 @@ const ShoppingList = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header migliorato con animazioni */}
-        <div className="mb-8 text-center animate-fade-in">
+        <div className="mb-8 text-center animate-fade-in px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="relative">
-              <ShoppingCart className="h-12 w-12 text-blue-600 animate-bounce" />
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center">
+              <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-blue-600 animate-bounce" />
+              <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">{totalCount - completedCount}</span>
               </div>
             </div>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 animate-slide-up">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 animate-slide-up">
             🛒 Lista della Spesa
           </h1>
-          <div className="text-lg text-muted-foreground mb-6 animate-slide-up" style={{animationDelay: '0.1s'}}>
+          <div className="text-sm sm:text-lg text-muted-foreground mb-6 animate-slide-up px-4" style={{animationDelay: '0.1s'}}>
             La tua lista intelligente per non dimenticare nulla
           </div>
-          <div className="flex items-center justify-center gap-4 animate-slide-up" style={{animationDelay: '0.2s'}}>
-            <Badge variant="outline" className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 text-green-700 dark:text-green-300 border-green-300 px-4 py-2 text-sm font-semibold">
-              <Check className="h-4 w-4 mr-2" />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 animate-slide-up" style={{animationDelay: '0.2s'}}>
+            <Badge variant="outline" className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 text-green-700 dark:text-green-300 border-green-300 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">
+              <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               {completedCount}/{totalCount} completati
             </Badge>
-            <Button variant="outline" size="sm" onClick={handleWhatsAppShare} className="hover:scale-105 transition-all duration-300 hover:shadow-lg border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20">
-              <MessageCircle className="h-4 w-4 mr-2 text-green-600" />
-              Condividi su WhatsApp
+            <Button variant="outline" size="sm" onClick={handleWhatsAppShare} className="hover:scale-105 transition-all duration-300 hover:shadow-lg border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-xs sm:text-sm">
+              <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-green-600" />
+              <span className="hidden xs:inline">Condividi su</span> WhatsApp
             </Button>
           </div>
         </div>
@@ -267,57 +267,57 @@ const ShoppingList = () => {
         <div className="space-y-4 mb-8">
           {items.map((item, index) => (
             <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg transition-all duration-300 border-l-4 border-blue-500 ${checkedItems[item.id] ? 'opacity-60' : 'hover:shadow-xl hover:-translate-y-1'} animate-fade-in`} style={{animationDelay: `${index * 0.1}s`}}>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-4">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start space-x-3 sm:space-x-4">
                   <Checkbox
                     checked={checkedItems[item.id] || false}
                     onCheckedChange={() => toggleItemCheck(item.id)}
-                    className="w-5 h-5 transition-all duration-300 hover:scale-110"
+                    className="w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 hover:scale-110 mt-1"
                   />
                   
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className={`font-semibold text-foreground transition-all duration-300 ${checkedItems[item.id] ? 'line-through opacity-60' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex-1">
+                        <h3 className={`font-semibold text-sm sm:text-base text-foreground transition-all duration-300 break-words ${checkedItems[item.id] ? 'line-through opacity-60' : ''}`}>
                           {item.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                          <span className="text-xs sm:text-sm text-muted-foreground">
                             {item.quantity}
                           </span>
                           <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:scale-105 transition-transform duration-200">
                             {item.category}
                           </Badge>
                           {item.priority === 'alta' && (
-                            <Badge className={getPriorityColor(item.priority) + " animate-pulse"}>
+                            <Badge className={getPriorityColor(item.priority) + " animate-pulse text-xs"}>
                               Priorità Alta
                             </Badge>
                           )}
-                          <span className="text-sm font-medium text-green-600">
+                          <span className="text-xs sm:text-sm font-medium text-green-600">
                             €{item.cost.toFixed(2)}
                           </span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         {checkedItems[item.id] ? (
                           <div className="flex items-center text-green-600 dark:text-green-400 animate-fade-in">
-                            <Check className="h-5 w-5 mr-1 animate-bounce" />
-                            <span className="text-sm font-medium">Completato</span>
+                            <Check className="h-4 w-4 sm:h-5 sm:w-5 mr-1 animate-bounce" />
+                            <span className="text-xs sm:text-sm font-medium">Completato</span>
                           </div>
                         ) : (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 sm:gap-2">
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-700 dark:text-green-300 hover:scale-105 transition-all duration-300 hover:shadow-md"
+                              className="border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-700 dark:text-green-300 hover:scale-105 transition-all duration-300 hover:shadow-md text-xs sm:text-sm px-2 py-1 h-8"
                               onClick={() => handleAddToPantry(item)}
                             >
-                              <Package className="h-4 w-4 mr-1" />
-                              Dispensa
+                              <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              <span className="hidden xs:inline">Dispensa</span>
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-105 transition-all duration-300">
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-105 transition-all duration-300 px-2 py-1 h-8">
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </div>
                         )}

@@ -35,26 +35,26 @@ const AddFamilyMemberModal: React.FC<AddFamilyMemberModalProps> = ({ onAddMember
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          <Users className="h-4 w-4" />
-          Aggiungi Famiglia
+        <Button variant="outline" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+          <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden xs:inline">Aggiungi</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="w-[95vw] max-w-md mx-4 rounded-lg">
         <DialogHeader>
-          <DialogTitle>Aggiungi un Membro della Famiglia</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Aggiungi un Membro della Famiglia</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 p-4">
           <Input
             placeholder="Nome del membro"
             value={memberName}
             onChange={(e) => setMemberName(e.target.value)}
-            className="w-full"
+            className="w-full text-base"
           />
           <Button 
             onClick={handleAddMember} 
-            className="w-full bg-gradient-to-r from-orange-600 to-red-600"
+            className="w-full bg-gradient-to-r from-orange-600 to-red-600 h-12 text-base font-medium"
           >
             Aggiungi
           </Button>

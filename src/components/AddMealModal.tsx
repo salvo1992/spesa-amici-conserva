@@ -89,11 +89,11 @@ const AddMealModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <Utensils className="h-6 w-6 text-red-600" />
-            Aggiungi {getMealTypeLabel(mealType)}
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto mx-4 rounded-lg">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Utensils className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+            <span className="break-words">Aggiungi {getMealTypeLabel(mealType)}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -113,12 +113,12 @@ const AddMealModal = ({
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
               {filteredRecipes.length > 0 ? (
                 filteredRecipes.map((recipe) => (
                   <div 
                     key={recipe.id} 
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    className={`border rounded-lg p-3 cursor-pointer transition-all ${
                       selectedRecipes.some(r => r.id === recipe.id)
                         ? 'bg-red-50 border-red-300 shadow-md' 
                         : 'hover:bg-gray-50 border-gray-200'
@@ -128,11 +128,12 @@ const AddMealModal = ({
                     <div className="flex items-start gap-3">
                       <Checkbox 
                         checked={selectedRecipes.some(r => r.id === recipe.id)}
+                        className="mt-1"
                       />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-red-800">{recipe.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{recipe.description}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-red-800 text-sm sm:text-base break-words">{recipe.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">{recipe.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-muted-foreground">
                           <span>⏱️ {recipe.prep_time} min</span>
                           <span>👥 {recipe.servings} porzioni</span>
                         </div>
@@ -141,7 +142,7 @@ const AddMealModal = ({
                   </div>
                 ))
               ) : (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'Nessuna ricetta trovata' : 'Nessuna ricetta salvata'}
                 </div>
               )}
@@ -163,50 +164,52 @@ const AddMealModal = ({
               
               <div className="space-y-2">
                 <h4 className="font-medium text-red-800">Ingredienti</h4>
-                {customMeal.ingredients.map((ingredient, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <Input 
-                      placeholder="Ingrediente" 
-                      value={ingredient.name}
-                      onChange={(e) => {
-                        const newIngredients = [...customMeal.ingredients];
-                        newIngredients[index].name = e.target.value;
-                        setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
-                      }}
-                      className="flex-1"
-                    />
-                    <Input 
-                      placeholder="Quantità" 
-                      value={ingredient.quantity}
-                      onChange={(e) => {
-                        const newIngredients = [...customMeal.ingredients];
-                        newIngredients[index].quantity = e.target.value;
-                        setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
-                      }}
-                      className="w-20"
-                    />
-                    <Input 
-                      placeholder="Unità" 
-                      value={ingredient.unit}
-                      onChange={(e) => {
-                        const newIngredients = [...customMeal.ingredients];
-                        newIngredients[index].unit = e.target.value;
-                        setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
-                      }}
-                      className="w-20"
-                    />
-                    {customMeal.ingredients.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                 {customMeal.ingredients.map((ingredient, index) => (
+                   <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                     <Input 
+                       placeholder="Ingrediente" 
+                       value={ingredient.name}
+                       onChange={(e) => {
+                         const newIngredients = [...customMeal.ingredients];
+                         newIngredients[index].name = e.target.value;
+                         setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
+                       }}
+                       className="flex-1 text-sm"
+                     />
+                     <div className="flex gap-2">
+                       <Input 
+                         placeholder="Quantità" 
+                         value={ingredient.quantity}
+                         onChange={(e) => {
+                           const newIngredients = [...customMeal.ingredients];
+                           newIngredients[index].quantity = e.target.value;
+                           setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
+                         }}
+                         className="w-24 text-sm"
+                       />
+                       <Input 
+                         placeholder="Unità" 
+                         value={ingredient.unit}
+                         onChange={(e) => {
+                           const newIngredients = [...customMeal.ingredients];
+                           newIngredients[index].unit = e.target.value;
+                           setCustomMeal(prev => ({ ...prev, ingredients: newIngredients }));
+                         }}
+                         className="w-20 text-sm"
+                       />
+                       {customMeal.ingredients.length > 1 && (
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleRemoveIngredient(index)}
+                           className="text-red-600 hover:text-red-700 px-2"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </Button>
+                       )}
+                     </div>
+                   </div>
+                 ))}
                 
                 <Button 
                   variant="outline" 

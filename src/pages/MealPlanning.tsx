@@ -254,27 +254,27 @@ const MealPlanning = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 max-w-4xl mx-auto">
-            {weekDates.map((date, index) => (
-              <Button
-                key={date.toISOString()}
-                variant={isSameDay(date, selectedDate) ? "default" : "outline"}
-                className={`h-[80px] flex flex-col items-center justify-center gap-2 transition-all duration-500 transform hover:scale-105 ${
-                  isSameDay(date, selectedDate) 
-                    ? 'bg-gradient-to-br from-red-600 via-orange-500 to-red-700 text-white shadow-xl shadow-red-500/25 scale-105 border-0' 
-                    : 'hover:bg-gradient-to-br hover:from-red-50 hover:to-orange-50 dark:hover:from-red-900/20 dark:hover:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600 hover:shadow-lg'
-                }`}
-                onClick={() => setSelectedDate(date)}
-              >
-                <span className={`text-sm font-semibold ${isSameDay(date, selectedDate) ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                  {format(date, 'EEEE', { locale: it })}
-                </span>
-                <span className={`text-xs ${isSameDay(date, selectedDate) ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {format(date, 'd MMMM', { locale: it })}
-                </span>
-              </Button>
-            ))}
-          </div>
+           <div className="grid grid-cols-7 gap-1 sm:gap-2 max-w-4xl mx-auto px-2">
+             {weekDates.map((date, index) => (
+               <Button
+                 key={date.toISOString()}
+                 variant={isSameDay(date, selectedDate) ? "default" : "outline"}
+                 className={`h-[60px] sm:h-[80px] flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all duration-500 transform hover:scale-105 text-xs sm:text-sm ${
+                   isSameDay(date, selectedDate) 
+                     ? 'bg-gradient-to-br from-red-600 via-orange-500 to-red-700 text-white shadow-xl shadow-red-500/25 scale-105 border-0' 
+                     : 'hover:bg-gradient-to-br hover:from-red-50 hover:to-orange-50 dark:hover:from-red-900/20 dark:hover:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600 hover:shadow-lg'
+                 }`}
+                 onClick={() => setSelectedDate(date)}
+               >
+                 <span className={`text-xs sm:text-sm font-semibold leading-tight ${isSameDay(date, selectedDate) ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                   {format(date, 'EEE', { locale: it })}
+                 </span>
+                 <span className={`text-xs leading-tight ${isSameDay(date, selectedDate) ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'}`}>
+                   {format(date, 'd/M', { locale: it })}
+                 </span>
+               </Button>
+             ))}
+           </div>
         </div>
 
         {/* Griglia piani pasto */}
