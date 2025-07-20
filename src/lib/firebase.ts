@@ -22,10 +22,15 @@ let app: any = null;
 let auth: any = null;
 let db: any = null;
 
+// Inizializza Firebase solo se configurato
 if (isFirebaseConfigured()) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.warn('Errore inizializzazione Firebase:', error);
+  }
 }
 
 // Types

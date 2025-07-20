@@ -42,20 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     
-    // Se Firebase è configurato, monitora lo stato di autenticazione
-    if (firebaseAuth.isAuthenticated()) {
-      const currentUser = firebaseAuth.getCurrentUser();
-      if (currentUser && !savedUser) {
-        const userData = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          name: currentUser.name
-        };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-      }
-    }
-    
     setIsLoading(false);
   }, []);
 
