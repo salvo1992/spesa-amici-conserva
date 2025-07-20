@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { firebaseAuth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 
 interface User {
   uid: string;
@@ -31,30 +33,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Controlla se c'è un utente salvato nel localStorage
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
+    const auth = getAuth();
+    
+    // Listener per i cambiamenti di stato dell'autenticazione Firebase
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Utente'
+        };
         setUser(userData);
-      } catch (error) {
+        localStorage.setItem('user', JSON.stringify(userData));
+      } else {
+        setUser(null);
         localStorage.removeItem('user');
       }
-    }
-    
-    // Controlla l'autenticazione Firebase
-    const currentUser = firebaseAuth.getCurrentUser();
-    if (currentUser && !savedUser) {
-      const userData = {
-        uid: currentUser.uid,
-        email: currentUser.email,
-        name: currentUser.name
-      };
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-    }
-    
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    // Cleanup del listener
+    return () => unsubscribe();
   }, []);
 
   const login = (userData: User) => {
@@ -63,9 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    await firebaseAuth.logout();
+    try {
+      await firebaseAuth.logout();
+      // Lo stato verrà aggiornato automaticamente dal listener onAuthStateChanged
+    } catch (error) {
+      console.error('Errore durante il logout:', error);
+      // Fallback: pulisce manualmente lo stato locale
+      setUser(null);
+      localStorage.removeItem('user');
+    }
   };
 
   const value = {

@@ -336,6 +336,18 @@ export const firebaseApi = {
 
   // Reviews
   getReviews: async (): Promise<Review[]> => {
+    if (!db) return [];
+    // Le recensioni sono pubbliche - visibili a tutti
+    const q = query(
+      collection(db, 'reviews'),
+      orderBy('created_at', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+  },
+
+  // Ottieni solo le recensioni dell'utente corrente (per gestione personale)
+  getUserReviews: async (): Promise<Review[]> => {
     if (!db || !auth?.currentUser) return [];
     const q = query(
       collection(db, 'reviews'),
@@ -455,7 +467,7 @@ export const firebaseApi = {
       firebaseApi.getShoppingItems(),
       firebaseApi.getPantryItems(),
       firebaseApi.getRecipes(),
-      firebaseApi.getReviews()
+      firebaseApi.getUserReviews()
     ]);
     
     return {
@@ -474,7 +486,7 @@ export const firebaseApi = {
       firebaseApi.getShoppingItems(),
       firebaseApi.getPantryItems(),
       firebaseApi.getRecipes(),
-      firebaseApi.getReviews()
+      firebaseApi.getUserReviews()
     ]);
 
     const deletePromises = [
