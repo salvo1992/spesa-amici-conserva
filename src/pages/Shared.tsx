@@ -82,9 +82,13 @@ const Shared = () => {
   const createMutation = useMutation({
     mutationFn: firebaseApi.createSharedList,
     onSuccess: () => {
+      // Delay dialog close to prevent DOM race conditions
+      setTimeout(() => {
+        setShowAddDialog(false);
+        setNewList({ name: '', type: 'shopping', members: [''] });
+      }, 100);
+      
       queryClient.invalidateQueries({ queryKey: ['shared-lists'] });
-      setShowAddDialog(false);
-      setNewList({ name: '', type: 'shopping', members: [''] });
       toast({ title: "Lista condivisa creata", description: "La lista è stata creata e condivisa con successo!" });
     },
     onError: (error) => {
@@ -133,7 +137,8 @@ const Shared = () => {
       return;
     }
     
-    // Previene re-render durante mutation usando il callback onSuccess/onError
+    if (createMutation.isPending) return; // Prevent double-click
+    
     createMutation.mutate({
       name: newList.name,
       type: newList.type,
@@ -219,6 +224,9 @@ const Shared = () => {
                     <DialogTitle className="text-2xl font-bold text-center">
                       Crea Lista Condivisa
                     </DialogTitle>
+                    <DialogDescription>
+                      Collabora con famiglia e amici su liste condivise in tempo reale
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
                     <div>
