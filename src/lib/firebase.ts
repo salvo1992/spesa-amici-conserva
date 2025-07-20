@@ -115,6 +115,7 @@ export interface MealPlan {
 export interface Review {
   id: string;
   user_id: string;
+  user_name?: string;
   product_name?: string;
   app_review: boolean;
   rating: number;
@@ -468,9 +469,11 @@ export const firebaseApi = {
 
   createReview: async (data: Omit<Review, 'id' | 'user_id' | 'created_at'>) => {
     if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    const currentUser = firebaseAuth.getCurrentUser();
     return await addDoc(collection(db, 'reviews'), {
       ...data,
       user_id: auth.currentUser.uid,
+      user_name: currentUser?.name || 'Utente',
       helpful_count: 0,
       created_at: new Date().toISOString()
     });
