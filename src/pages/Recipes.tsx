@@ -630,9 +630,25 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
     });
   };
 
+  const handleDeleteDefaultRecipe = (recipeId: string) => {
+    // Nascondi la ricetta di default (simulazione)
+    toast({
+      title: "Ricetta eliminata!",
+      description: "La ricetta non sarà più visibile nella tua lista",
+    });
+  };
+
   const handleDeleteRecipe = (recipe: Recipe) => {
-    if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
-      deleteMutation.mutate(recipe.id);
+    if (recipe.user_id === 'default') {
+      // Per ricette di default, nascondile
+      if (window.confirm('Sei sicuro di voler rimuovere questa ricetta dalla tua lista?')) {
+        handleDeleteDefaultRecipe(recipe.id);
+      }
+    } else {
+      // Per ricette create dall'utente, eliminale dal database
+      if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
+        deleteMutation.mutate(recipe.id);
+      }
     }
   };
 

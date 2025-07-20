@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -692,4 +692,81 @@ export const firebaseApi = {
       throw error;
     }
   },
+};
+
+// Funzioni aggiuntive per ricerca utenti e condivisione ricette
+export const searchUsers = async (searchQuery: string) => {
+  if (!db) return [];
+  
+  // Simulazione ricerca utenti - in realtà cercherebbe nel database
+  const allUsers = [
+    { id: 'user1', firstName: 'Marco', lastName: 'Rossi' },
+    { id: 'user2', firstName: 'Giulia', lastName: 'Bianchi' },
+    { id: 'user3', firstName: 'Alessandro', lastName: 'Verdi' },
+    { id: 'user4', firstName: 'Francesca', lastName: 'Neri' },
+    { id: 'user5', firstName: 'Luca', lastName: 'Ferrari' }
+  ];
+  
+  return allUsers.filter(user => 
+    user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+};
+
+export const shareRecipeWithUser = async (recipeId: string, targetUserId: string) => {
+  if (!auth.currentUser) throw new Error('User not authenticated');
+  
+  const shareData = {
+    recipeId,
+    fromUserId: auth.currentUser.uid,
+    toUserId: targetUserId,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  
+  if (db) {
+    await addDoc(collection(db, 'sharedRecipes'), shareData);
+  }
+};
+
+// Funzione per accettare/rifiutare ricette condivise
+export const respondToSharedRecipe = async (shareId: string, accept: boolean) => {
+  if (!auth.currentUser) throw new Error('User not authenticated');
+  
+  if (db) {
+    const shareRef = doc(db, 'sharedRecipes', shareId);
+    await updateDoc(shareRef, {
+      status: accept ? 'accepted' : 'rejected',
+      respondedAt: new Date().toISOString()
+    });
+    
+    if (accept) {
+      // Se accettata, aggiungi la ricetta alle ricette dell'utente
+      const shareDoc = await getDoc(shareRef);
+      if (shareDoc.exists()) {
+        const shareData = shareDoc.data();
+        // Qui dovresti copiare la ricetta nelle ricette dell'utente destinatario
+        // Implementa la logica specifica in base a come gestisci le ricette
+      }
+    }
+  }
+};
+
+// Funzione per ottenere le ricette condivise in attesa
+export const getPendingSharedRecipes = async () => {
+  if (!auth.currentUser) throw new Error('User not authenticated');
+  
+  if (!db) return [];
+  
+  const q = query(
+    collection(db, 'sharedRecipes'),
+    where('toUserId', '==', auth.currentUser.uid),
+    where('status', '==', 'pending')
+  );
+  
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 };
