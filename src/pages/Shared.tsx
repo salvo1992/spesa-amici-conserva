@@ -86,6 +86,14 @@ const Shared = () => {
       setShowAddDialog(false);
       setNewList({ name: '', type: 'shopping', members: [''] });
       toast({ title: "Lista condivisa creata", description: "La lista è stata creata e condivisa con successo!" });
+    },
+    onError: (error) => {
+      console.error('Error creating shared list:', error);
+      toast({ 
+        title: "Errore", 
+        description: "Impossibile creare la lista condivisa",
+        variant: "destructive" 
+      });
     }
   });
 
@@ -94,6 +102,14 @@ const Shared = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shared-lists'] });
       toast({ title: "Lista eliminata", description: "La lista condivisa è stata eliminata" });
+    },
+    onError: (error) => {
+      console.error('Error deleting shared list:', error);
+      toast({ 
+        title: "Errore", 
+        description: "Impossibile eliminare la lista",
+        variant: "destructive" 
+      });
     }
   });
 
@@ -107,7 +123,7 @@ const Shared = () => {
     setNewList({...newList, members: updated});
   };
 
-  const createSharedList = async () => {
+  const createSharedList = () => {
     if (!newList.name.trim()) {
       toast({ 
         title: "Errore", 
@@ -117,18 +133,15 @@ const Shared = () => {
       return;
     }
     
-    try {
-      await createMutation.mutateAsync({
-        name: newList.name,
-        type: newList.type,
-        owner_id: '', // Sarà impostato da createSharedList
-        members: newList.members.filter(m => m.trim()),
-        items: [],
-        total_cost: 0
-      });
-    } catch (error) {
-      console.error('Error creating shared list:', error);
-    }
+    // Previene re-render durante mutation usando il callback onSuccess/onError
+    createMutation.mutate({
+      name: newList.name,
+      type: newList.type,
+      owner_id: '', // Sarà impostato da createSharedList
+      members: newList.members.filter(m => m.trim()),
+      items: [],
+      total_cost: 0
+    });
   };
 
   const handleOpenList = (list: any) => {
