@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -8,9 +8,20 @@ import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus,
 import { useQuery } from '@tanstack/react-query';
 import { firebaseApi } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -93,16 +104,21 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="group relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse"></div>
-                <Badge className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 px-4 py-2 text-sm font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 cursor-pointer overflow-hidden">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse"></div>
+                <Badge className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 text-white border-0 px-4 py-2 text-sm font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 cursor-pointer overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="flex items-center gap-2 relative z-10">
-                    <Star className="h-4 w-4 animate-spin" style={{ animationDuration: '3s' }} />
-                    <span className="bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent font-extrabold">Tutto Fantastico!</span>
-                    <div className="flex gap-1">
-                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="flex flex-col items-center gap-1 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 animate-pulse" />
+                      <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent font-extrabold">
+                        {format(currentDateTime, 'HH:mm:ss')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3" />
+                      <span className="bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent font-bold text-xs">
+                        {format(currentDateTime, 'dd/MM/yyyy', { locale: it })}
+                      </span>
                     </div>
                   </div>
                 </Badge>
