@@ -7,17 +7,30 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Star, MessageSquare, ThumbsUp, User, Edit3, Share2, Facebook, Twitter, Instagram } from 'lucide-react';
+import { Star, MessageSquare, ThumbsUp, User, Edit3, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseApi, type Review } from '@/lib/firebase';
 
+// Definizione del tipo Comment
+interface Comment {
+  id: string;
+  review_id: string;
+  user_id: string;
+  user_name: string;
+  comment: string;
+  created_at: string;
+}
+
 const Reviews = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showReviewDialog, setShowReviewDialog] = useState(false);
-  const [helpfulVotes, setHelpfulVotes] = useState<{[key: string]: {voted: boolean, count: number}}>({});
+  const [userVotes, setUserVotes] = useState<{[key: string]: boolean}>({});
+  const [showComments, setShowComments] = useState<{[key: string]: boolean}>({});
+  const [newComment, setNewComment] = useState<{[key: string]: string}>({});
+  const [comments, setComments] = useState<{[key: string]: Comment[]}>({});
   const [newReview, setNewReview] = useState({
     product_name: '',
     rating: 5,
@@ -128,53 +141,95 @@ const Reviews = () => {
   };
 
   const handleHelpful = (reviewId: string) => {
-    setHelpfulVotes(prev => {
-      const current = prev[reviewId] || { voted: false, count: 0 };
-      const newVoted = !current.voted;
-      const newCount = newVoted ? current.count + 1 : Math.max(0, current.count - 1);
+    if (!user) {
+      toast({
+        title: "Errore",
+        description: "Devi essere registrato per votare",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUserVotes(prev => {
+      const hasVoted = prev[reviewId];
+      const newVotes = { ...prev };
       
-      return {
-        ...prev,
-        [reviewId]: {
-          voted: newVoted,
-          count: newCount
-        }
-      };
+      if (hasVoted) {
+        delete newVotes[reviewId];
+      } else {
+        newVotes[reviewId] = true;
+      }
+      
+      return newVotes;
     });
 
     toast({
-      title: helpfulVotes[reviewId]?.voted ? "Voto rimosso" : "Grazie!",
-      description: helpfulVotes[reviewId]?.voted ? "Hai rimosso il tuo voto" : "Il tuo voto è stato registrato"
+      title: userVotes[reviewId] ? "Voto rimosso" : "Grazie!",
+      description: userVotes[reviewId] ? "Hai rimosso il tuo voto" : "Il tuo voto è stato registrato"
     });
   };
 
-  const handleShare = (review: Review, platform: string) => {
-    const appName = "Food Manager - Il Vikingo del Web";
-    const appUrl = window.location.origin;
-    const logoUrl = "/lovable-uploads/7c75a14f-99a4-4250-a4c1-00b33d7be67b.png";
-    const text = `🍽️ ${appName}\n\n"${review.comment}"\n\n⭐ Recensione di ${review.product_name}\n\n📱 Scarica l'app: ${appUrl}`;
-    
-    let shareUrl = '';
-    switch (platform) {
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}&quote=${encodeURIComponent(text)}`;
-        break;
-      case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-        break;
-      case 'instagram':
-        navigator.clipboard.writeText(text);
-        toast({
-          title: "Copiato!",
-          description: "Testo copiato negli appunti per Instagram"
-        });
-        return;
+  const handleAddComment = (reviewId: string) => {
+    if (!user) {
+      toast({
+        title: "Errore",
+        description: "Devi essere registrato per commentare",
+        variant: "destructive"
+      });
+      return;
     }
-    
-    if (shareUrl) {
-      window.open(shareUrl, '_blank', 'width=600,height=400');
-    }
+
+    const commentText = newComment[reviewId]?.trim();
+    if (!commentText) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      review_id: reviewId,
+      user_id: user.uid,
+      user_name: user.name || user.email?.split('@')[0] || 'Utente',
+      comment: commentText,
+      created_at: new Date().toISOString()
+    };
+
+    setComments(prev => ({
+      ...prev,
+      [reviewId]: [...(prev[reviewId] || []), comment]
+    }));
+
+    setNewComment(prev => ({
+      ...prev,
+      [reviewId]: ''
+    }));
+
+    toast({
+      title: "Commento aggiunto",
+      description: "Il tuo commento è stato pubblicato"
+    });
   };
+
+  const handleDeleteComment = (reviewId: string, commentId: string) => {
+    setComments(prev => ({
+      ...prev,
+      [reviewId]: prev[reviewId]?.filter(c => c.id !== commentId) || []
+    }));
+
+    toast({
+      title: "Commento eliminato",
+      description: "Il commento è stato rimosso"
+    });
+  };
+
+  const toggleComments = (reviewId: string) => {
+    setShowComments(prev => ({
+      ...prev,
+      [reviewId]: !prev[reviewId]
+    }));
+  };
+
+  const getUserVoteCount = (reviewId: string) => {
+    return userVotes[reviewId] ? 1 : 0;
+  };
+
 
   if (isLoading) {
     return (
@@ -191,8 +246,10 @@ const Reviews = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
             Recensioni e Valutazioni
           </h1>
-          <div className="text-muted-foreground">
-            Condividi la tua esperienza con le ricette e l'app
+          <div className="text-muted-foreground max-w-2xl mx-auto">
+            Condividi la tua esperienza con le ricette e l'app. Scambia recensioni sulle ricette, 
+            discuti di cucina, condividi idee per feste con amici. Food Manager è grata ai suoi utenti 
+            per averla scelta e ti invita a lasciare una recensione se l'app ti piace!
           </div>
         </div>
 
@@ -249,46 +306,91 @@ const Reviews = () => {
                     <button 
                       onClick={() => handleHelpful(review.id)}
                       className={`flex items-center space-x-2 transition-colors ${
-                        helpfulVotes[review.id]?.voted 
+                        userVotes[review.id] 
                           ? 'text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg' 
                           : 'text-gray-500 hover:text-green-600'
                       }`}
                     >
-                      <ThumbsUp className={`h-4 w-4 ${helpfulVotes[review.id]?.voted ? 'fill-current' : ''}`} />
+                      <ThumbsUp className={`h-4 w-4 ${userVotes[review.id] ? 'fill-current' : ''}`} />
                       <span className="text-sm">
-                        {(helpfulVotes[review.id]?.count || 0) + review.helpful_count} utile
+                        {getUserVoteCount(review.id) + review.helpful_count} utile
                       </span>
                     </button>
                     
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Condividi:</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(review, 'facebook')}
-                        className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                      >
-                        <Facebook className="h-4 w-4 text-blue-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(review, 'twitter')}
-                        className="h-8 w-8 p-0 hover:bg-sky-100 dark:hover:bg-sky-900/20"
-                      >
-                        <Twitter className="h-4 w-4 text-sky-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(review, 'instagram')}
-                        className="h-8 w-8 p-0 hover:bg-pink-100 dark:hover:bg-pink-900/20"
-                      >
-                        <Instagram className="h-4 w-4 text-pink-600" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleComments(review.id)}
+                      className="flex items-center gap-2 text-gray-500 hover:text-green-600"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="text-sm">Commenta</span>
+                    </Button>
                   </div>
                 </div>
+
+                {/* Sezione Commenti */}
+                {showComments[review.id] && (
+                  <div className="mt-4 border-t pt-4">
+                    <div className="space-y-3">
+                      {comments[review.id]?.map((comment) => (
+                        <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {comment.user_name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {comment.comment}
+                              </p>
+                            </div>
+                            {comment.user_id === user?.uid && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteComment(review.id, comment.id)}
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Form per nuovo commento */}
+                      <div className="flex gap-2 mt-3">
+                        <Input
+                          placeholder="Scrivi un commento..."
+                          value={newComment[review.id] || ''}
+                          onChange={(e) => setNewComment(prev => ({
+                            ...prev,
+                            [review.id]: e.target.value
+                          }))}
+                          className="flex-1"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleAddComment(review.id);
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddComment(review.id)}
+                          disabled={!newComment[review.id]?.trim()}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Invia
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
