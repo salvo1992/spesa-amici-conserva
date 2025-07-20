@@ -120,6 +120,7 @@ const Shared = () => {
     createMutation.mutate({
       name: newList.name,
       type: newList.type,
+      owner_id: '', // Sarà impostato da createSharedList
       members: newList.members.filter(m => m.trim()),
       items: [],
       total_cost: 0

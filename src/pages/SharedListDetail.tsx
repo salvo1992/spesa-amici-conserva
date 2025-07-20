@@ -1,864 +1,541 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { 
-  ArrowLeft, Plus, Save, Share2, Check, X, AlertTriangle, 
-  ShoppingCart, Package, Users, Calendar, Copy, Mail, 
-  Trash2, Edit3, CheckCircle, UserPlus
-} from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit, MessageCircle, Send, Users, Clock, Euro, Package, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firebaseAuth, firebaseApi, CATEGORIES } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  firebaseApi,
+  type SharedList, 
+  type SharedListItem,
+  CATEGORIES 
+} from '@/lib/firebase';
 
 const SharedListDetail = () => {
-  const { id } = useParams();
+  const { id: listId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
   
+  const [list, setList] = useState<SharedList | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showMembersDialog, setShowMembersDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [newEmail, setNewEmail] = useState('');
+  const [editingItem, setEditingItem] = useState<SharedListItem | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showChatDialog, setShowChatDialog] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
   
   const [newItem, setNewItem] = useState({
     name: '',
-    quantity: '',
-    category: '',
-    priority: 'media' as const,
-    cost: 0
+    quantity: '1',
+    category: 'Altro',
+    priority: 'media' as 'alta' | 'media' | 'bassa',
+    cost: 0,
+    completed: false
   });
 
-  // Mock data per liste demo
-  const defaultLists: { [key: string]: any } = {
-    'default-1': {
-      id: 'default-1',
-      owner_id: 'default',
-      name: 'Lista Natale 2024',
-      type: 'shopping',
-      members: ['famiglia@esempio.com', 'amici@esempio.com'],
-      items: [
-        { id: '1', name: 'Panettone', quantity: '2', category: 'Pane e Dolci', priority: 'alta', cost: 25.90, completed: false },
-        { id: '2', name: 'Champagne', quantity: '1', category: 'Bevande', priority: 'media', cost: 45.00, completed: false },
-        { id: '3', name: 'Decorazioni', quantity: '10', category: 'Altro', priority: 'bassa', cost: 35.60, completed: true },
-        { id: '4', name: 'Regali bambini', quantity: '3', category: 'Altro', priority: 'alta', cost: 44.00, completed: false }
-      ],
-      total_cost: 150.50,
-      created_at: '2024-12-01'
-    },
-    'default-2': {
-      id: 'default-2',
-      owner_id: 'default',
-      name: 'Ferragosto al Mare',
-      type: 'shopping',
-      members: ['famiglia@esempio.com'],
-      items: [
-        { id: '1', name: 'Crema solare', quantity: '2', category: 'Igiene Personale', priority: 'alta', cost: 18.50, completed: true },
-        { id: '2', name: 'Bevande fresche', quantity: '6', category: 'Bevande', priority: 'media', cost: 24.90, completed: false },
-        { id: '3', name: 'Frutta fresca', quantity: '2kg', category: 'Frutta e Verdura', priority: 'media', cost: 12.80, completed: false },
-        { id: '4', name: 'Ghiaccio', quantity: '3', category: 'Altro', priority: 'bassa', cost: 9.00, completed: false }
-      ],
-      total_cost: 85.20,
-      created_at: '2024-08-10'
-    }
-  };
+  useEffect(() => {
+    loadSharedList();
+    // Aggiorna ogni 5 secondi per la collaborazione in tempo reale
+    const interval = setInterval(loadSharedList, 5000);
+    return () => clearInterval(interval);
+  }, [listId]);
 
-  const { data: sharedList, isLoading } = useQuery({
-    queryKey: ['shared-list', id],
-    queryFn: () => {
-      if (id && defaultLists[id]) {
-        return defaultLists[id];
-      }
-      return firebaseApi.getSharedList ? firebaseApi.getSharedList(id!) : null;
-    },
-    enabled: !!id
-  });
-
-  const updateItemMutation = useMutation({
-    mutationFn: async ({ itemId, updates }: { itemId: string, updates: any }) => {
-      if (sharedList?.owner_id === 'default') {
-        // Simulazione per liste demo
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      // Implementazione reale con Firebase
-      return firebaseApi.updateSharedListItem ? firebaseApi.updateSharedListItem(id!, itemId, updates) : Promise.resolve();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
-      toast({ title: "Elemento aggiornato", description: "Le modifiche sono state salvate" });
-      setEditingItem(null); // Chiude il dialogo di modifica
-    }
-  });
-
-  const addItemMutation = useMutation({
-    mutationFn: async (itemData: any) => {
-      if (sharedList?.owner_id === 'default') {
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      return firebaseApi.addSharedListItem ? firebaseApi.addSharedListItem(id!, itemData) : Promise.resolve();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
-      setShowAddDialog(false);
-      setNewItem({ name: '', quantity: '', category: '', priority: 'media', cost: 0 });
-      toast({ title: "Elemento aggiunto", description: "Il nuovo elemento è stato aggiunto alla lista" });
-    }
-  });
-
-  const deleteItemMutation = useMutation({
-    mutationFn: async (itemId: string) => {
-      if (sharedList?.owner_id === 'default') {
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      return firebaseApi.deleteSharedListItem ? firebaseApi.deleteSharedListItem(id!, itemId) : Promise.resolve();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
-      toast({ title: "Elemento eliminato", description: "L'elemento è stato rimosso dalla lista" });
-    }
-  });
-
-  const deleteListMutation = useMutation({
-    mutationFn: async () => {
-      if (sharedList?.owner_id === 'default') {
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Non può essere eliminata.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      return firebaseApi.deleteSharedList ? firebaseApi.deleteSharedList(id!) : Promise.resolve();
-    },
-    onSuccess: () => {
-      toast({ title: "Lista eliminata", description: "La lista condivisa è stata eliminata" });
-      navigate('/shared');
-    }
-  });
-
-  const addMemberMutation = useMutation({
-    mutationFn: async (email: string) => {
-      if (sharedList?.owner_id === 'default') {
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      
-      // Implementazione reale: aggiungi membro alla lista condivisa
-      // Simuliamo l'operazione per ora
-      console.log(`Adding member ${email} to list ${id}`);
-      return Promise.resolve();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
-      setNewEmail('');
-      toast({ title: "Membro aggiunto", description: "L'utente è stato aggiunto alla lista condivisa" });
-    }
-  });
-
-  const removeMemberMutation = useMutation({
-    mutationFn: async (email: string) => {
-      if (sharedList?.owner_id === 'default') {
-        toast({ 
-          title: "Lista Demo", 
-          description: "Questa è una lista di esempio. Le modifiche non verranno salvate.",
-          variant: "default"
-        });
-        return Promise.resolve();
-      }
-      
-      // Implementazione reale: rimuovi membro dalla lista condivisa
-      // Simuliamo l'operazione per ora
-      console.log(`Removing member ${email} from list ${id}`);
-      return Promise.resolve();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shared-list', id] });
-      toast({ title: "Membro rimosso", description: "L'utente è stato rimosso dalla lista condivisa" });
-    }
-  });
-
-  const toggleItemCompletion = (itemId: string, completed: boolean) => {
-    updateItemMutation.mutate({ itemId, updates: { completed: !completed } });
-  };
-
-  const handleEditSubmit = () => {
-    if (!editingItem) return;
+  const loadSharedList = async () => {
+    if (!listId) return;
     
-    updateItemMutation.mutate({ 
-      itemId: editingItem.id, 
-      updates: { ...editingItem }
-    });
+    try {
+      setLoading(true);
+      const data = await firebaseApi.getSharedListById(listId);
+      setList(data);
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile caricare la lista condivisa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const copyShareLink = () => {
-    const shareUrl = `${window.location.origin}/shared/${id}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast({ 
-      title: "Link copiato!", 
-      description: "Il link di condivisione è stato copiato negli appunti" 
-    });
-  };
-
-  const shareViaEmail = () => {
-    const shareUrl = `${window.location.origin}/shared/${id}`;
-    const subject = `Condivisione Lista: ${sharedList?.name}`;
-    const body = `Ti invito a collaborare sulla lista "${sharedList?.name}".\n\nAccedi qui: ${shareUrl}\n\nScarica l'app per partecipare alla lista condivisa!`;
-    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-  };
-
-  const addNewItem = () => {
-    if (!newItem.name.trim()) {
-      toast({ 
-        title: "Errore", 
+  const handleAddItem = async () => {
+    if (!listId || !newItem.name.trim()) {
+      toast({
+        title: "⚠️ Errore",
         description: "Inserisci il nome del prodotto",
-        variant: "destructive" 
+        variant: "destructive"
       });
       return;
     }
-    
-    addItemMutation.mutate({
-      ...newItem,
-      completed: false,
-      id: Date.now().toString()
-    });
+
+    try {
+      await firebaseApi.addItemToSharedList(listId, {
+        name: newItem.name,
+        quantity: newItem.quantity,
+        category: newItem.category,
+        priority: newItem.priority,
+        cost: newItem.cost,
+        completed: newItem.completed
+      });
+      
+      toast({
+        title: "✅ Prodotto aggiunto",
+        description: "Il prodotto è stato aggiunto alla lista condivisa"
+      });
+      
+      setShowAddDialog(false);
+      setNewItem({ name: '', quantity: '1', category: 'Altro', priority: 'media', cost: 0, completed: false });
+      await loadSharedList();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiungere il prodotto",
+        variant: "destructive"
+      });
+    }
   };
 
-  const addNewMember = () => {
-    if (!newEmail.trim() || !newEmail.includes('@')) {
-      toast({ 
-        title: "Errore", 
-        description: "Inserisci un indirizzo email valido",
-        variant: "destructive" 
+  const handleUpdateItem = async () => {
+    if (!listId || !editingItem) return;
+
+    try {
+      await firebaseApi.updateSharedListItem(listId, editingItem.id, {
+        name: editingItem.name,
+        quantity: editingItem.quantity,
+        category: editingItem.category,
+        priority: editingItem.priority,
+        cost: editingItem.cost
       });
-      return;
+      
+      toast({
+        title: "✅ Prodotto aggiornato",
+        description: "Il prodotto è stato modificato con successo"
+      });
+      
+      setShowEditDialog(false);
+      setEditingItem(null);
+      await loadSharedList();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiornare il prodotto",
+        variant: "destructive"
+      });
     }
-    
-    addMemberMutation.mutate(newEmail);
+  };
+
+  const handleToggleComplete = async (item: SharedListItem) => {
+    if (!listId) return;
+
+    try {
+      await firebaseApi.updateSharedListItem(listId, item.id, { completed: !item.completed });
+      await loadSharedList();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aggiornare lo stato del prodotto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    if (!listId) return;
+
+    try {
+      await firebaseApi.deleteSharedListItem(listId, itemId);
+      toast({
+        title: "🗑️ Prodotto eliminato",
+        description: `${itemName} è stato rimosso dalla lista`
+      });
+      await loadSharedList();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile eliminare il prodotto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteList = async () => {
+    if (!listId) return;
+
+    try {
+      await firebaseApi.deleteSharedListForUser(listId);
+      toast({
+        title: "🗑️ Lista eliminata",
+        description: "La lista è stata rimossa dal tuo account"
+      });
+      navigate('/shared');
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile eliminare la lista",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!listId || !chatMessage.trim()) return;
+
+    try {
+      await firebaseApi.addChatMessage(listId, chatMessage);
+      setChatMessage('');
+      await loadSharedList();
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile inviare il messaggio",
+        variant: "destructive"
+      });
+    }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'alta': return 'bg-red-100 text-red-700 border-red-200';
-      case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'bassa': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'alta': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+      case 'media': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'bassa': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
-  const TypeIcon = sharedList?.type === 'shopping' ? ShoppingCart : Package;
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Caricamento lista condivisa...</p>
+        </Card>
       </div>
     );
   }
 
-  if (!sharedList) {
+  if (!list) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 flex items-center justify-center">
         <Card className="p-8 text-center">
-          <AlertTriangle className="h-16 w-16 mx-auto text-yellow-500 mb-4" />
           <h2 className="text-2xl font-bold mb-2">Lista non trovata</h2>
-          <p className="text-muted-foreground mb-4">La lista condivisa che stai cercando non esiste o è stata eliminata.</p>
-          <Button onClick={() => navigate('/shared')}>
+          <p className="text-muted-foreground">La lista richiesta non esiste o non hai i permessi per visualizzarla</p>
+          <Button onClick={() => navigate('/shared')} className="mt-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna alle Liste Condivise
+            Torna alle liste
           </Button>
         </Card>
       </div>
     );
   }
 
-  const completedItems = sharedList.items.filter((item: any) => item.completed).length;
+  const completedItems = list.items ? list.items.filter(item => item.completed).length : 0;
 
   return (
-    <div className="p-2 sm:p-4 space-y-4 sm:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-3 sm:p-6 shadow-xl border border-blue-200/50 animate-fade-in">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/shared')}
-            className="hover:bg-blue-50 rounded-xl self-start"
+            className="mb-4 hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Indietro
+            Torna alle liste
           </Button>
           
-          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-            <Button 
-              onClick={() => setShowMembersDialog(true)}
-              variant="outline"
-              size="sm"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl text-xs sm:text-sm"
-            >
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Membri ({sharedList.members.length})
-            </Button>
-            
-            <Button 
-              onClick={() => setShowShareDialog(true)}
-              size="sm"
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-xl text-xs sm:text-sm"
-            >
-              <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Condividi
-            </Button>
-            
-            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-              <Button 
-                variant="outline"
-                onClick={() => setShowDeleteDialog(true)}
-                className="border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Elimina
-              </Button>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sei sicuro di voler eliminare questa lista?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Questa azione non può essere annullata. Tutti i prodotti nella lista verranno eliminati.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={() => deleteListMutation.mutate()}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    {deleteListMutation.isPending ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Eliminando...
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-blue-500">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    {list.type === 'shopping' ? '🛒' : '📦'} {list.name}
+                  </CardTitle>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      {list.members?.length || 0} membri
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      {completedItems}/{list.items?.length || 0} completati
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Euro className="h-4 w-4" />
+                      €{list.total_cost?.toFixed(2) || '0.00'}
+                    </div>
+                  </div>
+                  {list.last_modified_by && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Ultimo aggiornamento: {list.last_modified_by} - {new Date(list.last_modified_at || '').toLocaleString()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Dialog open={showChatDialog} onOpenChange={setShowChatDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Chat ({list.chat_messages?.length || 0})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>💬 Chat della Lista</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {list.chat_messages?.map((msg) => (
+                            <div 
+                              key={msg.id} 
+                              className={`p-2 rounded-lg ${msg.user_email === user?.email ? 'bg-blue-100 ml-4' : 'bg-gray-100 mr-4'}`}
+                            >
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {msg.user_name} - {new Date(msg.created_at).toLocaleTimeString()}
+                              </div>
+                              <div className="text-sm">{msg.message}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            value={chatMessage}
+                            onChange={(e) => setChatMessage(e.target.value)}
+                            placeholder="Scrivi un messaggio..."
+                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                          />
+                          <Button onClick={handleSendMessage} size="sm">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    ) : "Elimina lista"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleDeleteList}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Elimina Lista
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="relative self-center sm:self-auto">
-            <TypeIcon className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600 animate-pulse" />
-            <div className="absolute -inset-1 bg-blue-200/50 rounded-full animate-ping"></div>
-          </div>
-          <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-800 bg-clip-text text-transparent">
-              {sharedList.name}
-            </h1>
-            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
-              <Badge className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border border-blue-200 rounded-full text-xs">
-                {sharedList.type === 'shopping' ? '🛒 Lista Spesa' : '📦 Dispensa'}
-              </Badge>
-              {sharedList.owner_id === 'default' && (
-                <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 rounded-full text-xs">
-                  ✨ Esempio
-                </Badge>
-              )}
-            </div>
-          </div>
+        {/* Items */}
+        <div className="space-y-4 mb-8">
+          {list.items?.map((item) => (
+            <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-blue-500 ${item.completed ? 'opacity-60' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-4">
+                  <Checkbox
+                    checked={item.completed}
+                    onCheckedChange={() => handleToggleComplete(item)}
+                    className="w-5 h-5 mt-1"
+                  />
+                  
+                  <div className="flex-1">
+                    <h3 className={`font-semibold ${item.completed ? 'line-through opacity-60' : ''}`}>
+                      {item.name}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <span className="text-sm text-muted-foreground">{item.quantity}</span>
+                      <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                      {item.priority === 'alta' && (
+                        <Badge className={getPriorityColor(item.priority) + " text-xs"}>Priorità Alta</Badge>
+                      )}
+                      <span className="text-sm font-medium text-green-600">€{item.cost?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      Ultima modifica: {item.last_modified_by} - {new Date(item.last_modified_at).toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setEditingItem(item);
+                        setShowEditDialog(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => handleDeleteItem(item.id, item.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6 mt-4 text-xs sm:text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
-            <span>{sharedList.members.length} membri</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
-            <span>{new Date(sharedList.created_at).toLocaleDateString()}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-            <span>{completedItems}/{sharedList.items.length} completati</span>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <div className="flex justify-between text-sm font-medium mb-2">
-            <span className="text-gray-600">Progresso</span>
-            <span className="text-blue-700">{completedItems}/{sharedList.items.length}</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-700 ease-out shadow-inner"
-              style={{ width: `${sharedList.items.length > 0 ? (completedItems / sharedList.items.length) * 100 : 0}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Add Item Button */}
-      <div className="flex justify-center">
+        {/* Add Item Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button 
-              size="lg"
-              className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-500 hover:scale-105 group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-              <span className="relative z-10">Aggiungi Prodotto</span>
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg">
+              <Plus className="h-5 w-5 mr-2" />
+              Aggiungi Prodotto
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
-                ➕ Aggiungi Prodotto
-              </DialogTitle>
-              <DialogDescription>
-                Aggiungi un nuovo elemento alla lista condivisa
-              </DialogDescription>
+              <DialogTitle>Aggiungi Nuovo Prodotto</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div>
-                <Label className="text-sm font-semibold text-blue-700">Nome Prodotto</Label>
+                <Label>Nome Prodotto</Label>
                 <Input
                   value={newItem.name}
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                  placeholder="Es. Latte fresco 🥛"
-                  className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
+                  placeholder="Es. Latte intero"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-semibold text-blue-700">Quantità</Label>
+                  <Label>Quantità</Label>
                   <Input
                     value={newItem.quantity}
                     onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
-                    placeholder="Es. 2 litri"
-                    className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
+                    placeholder="1"
                   />
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold text-blue-700">Costo (€)</Label>
+                  <Label>Prezzo (€)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={newItem.cost}
                     onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
                     placeholder="0.00"
-                    className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
                   />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-semibold text-blue-700">Categoria</Label>
+                  <Label>Categoria</Label>
                   <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                    <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
-                      <SelectValue placeholder="Seleziona categoria" />
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.food.map(cat => (
+                      {[...CATEGORIES.food, ...CATEGORIES.home].map(cat => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold text-blue-700">Priorità</Label>
+                  <Label>Priorità</Label>
                   <Select value={newItem.priority} onValueChange={(value: any) => setNewItem({...newItem, priority: value})}>
-                    <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bassa">🟢 Bassa</SelectItem>
-                      <SelectItem value="media">🟡 Media</SelectItem>
-                      <SelectItem value="alta">🔴 Alta</SelectItem>
+                      <SelectItem value="bassa">Bassa</SelectItem>
+                      <SelectItem value="media">Media</SelectItem>
+                      <SelectItem value="alta">Alta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-
-              <Button 
-                onClick={addNewItem} 
-                disabled={addItemMutation.isPending}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                {addItemMutation.isPending ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Aggiungendo...
-                  </div>
-                ) : (
-                  <>
-                    <Plus className="h-5 w-5 mr-2" />
-                    Aggiungi Prodotto
-                  </>
-                )}
+              <Button onClick={handleAddItem} className="w-full">
+                Aggiungi Prodotto
               </Button>
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
-      {/* Items List */}
-      <div className="grid gap-4">
-        {sharedList.items.map((item: any, index: number) => (
-          <Card 
-            key={item.id || index} 
-            className={`bg-white/90 backdrop-blur-sm border-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] rounded-2xl animate-fade-in ${
-              item.completed ? 'border-green-200/50 bg-green-50/50' : 'border-blue-200/50'
-            }`}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleItemCompletion(item.id, item.completed)}
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      item.completed 
-                        ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                        : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                    }`}
-                  >
-                    {item.completed ? <Check className="h-4 w-4" /> : <div className="h-4 w-4 border-2 border-current rounded-full" />}
-                  </Button>
-                  
-                  <div className="flex-1">
-                    <h3 className={`font-semibold text-lg ${item.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-                      {item.name}
-                    </h3>
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700 rounded-full">
-                        📦 {item.quantity}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700 rounded-full">
-                        🏷️ {item.category}
-                      </Badge>
-                      <Badge variant="outline" className={`text-xs rounded-full ${getPriorityColor(item.priority)}`}>
-                        {item.priority === 'alta' ? '🔴' : item.priority === 'media' ? '🟡' : '🟢'} {item.priority}
-                      </Badge>
-                    </div>
+        {/* Edit Dialog */}
+        {editingItem && (
+          <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Modifica Prodotto</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Nome Prodotto</Label>
+                  <Input
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Quantità</Label>
+                    <Input
+                      value={editingItem.quantity}
+                      onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
+                    />
                   </div>
-                  
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-green-600">
-                      €{item.cost.toFixed(2)}
-                    </div>
+                  <div>
+                    <Label>Prezzo (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingItem.cost}
+                      onChange={(e) => setEditingItem({...editingItem, cost: parseFloat(e.target.value) || 0})}
+                    />
                   </div>
                 </div>
-                
-                <div className="flex gap-2 ml-4">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingItem({...item})}
-                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
-                          ✏️ Modifica Prodotto
-                        </DialogTitle>
-                      </DialogHeader>
-                      {editingItem && editingItem.id === item.id && (
-                        <div className="space-y-4 mt-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-blue-700">Nome Prodotto</Label>
-                            <Input
-                              value={editingItem.name}
-                              onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
-                              className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-semibold text-blue-700">Quantità</Label>
-                              <Input
-                                value={editingItem.quantity}
-                                onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
-                                className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-semibold text-blue-700">Costo (€)</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={editingItem.cost}
-                                onChange={(e) => setEditingItem({...editingItem, cost: parseFloat(e.target.value) || 0})}
-                                className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-semibold text-blue-700">Categoria</Label>
-                              <Select 
-                                value={editingItem.category} 
-                                onValueChange={(value) => setEditingItem({...editingItem, category: value})}
-                              >
-                                <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {CATEGORIES.food.map(cat => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm font-semibold text-blue-700">Priorità</Label>
-                              <Select 
-                                value={editingItem.priority} 
-                                onValueChange={(value: any) => setEditingItem({...editingItem, priority: value})}
-                              >
-                                <SelectTrigger className="mt-2 border-2 border-blue-200/50 focus:border-blue-500 rounded-xl">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="bassa">🟢 Bassa</SelectItem>
-                                  <SelectItem value="media">🟡 Media</SelectItem>
-                                  <SelectItem value="alta">🔴 Alta</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-4 mt-6">
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setEditingItem(null)} 
-                              className="flex-1 border-2 border-gray-300"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Annulla
-                            </Button>
-                            <Button 
-                              onClick={handleEditSubmit}
-                              disabled={updateItemMutation.isPending} 
-                              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                            >
-                              {updateItemMutation.isPending ? (
-                                <div className="flex items-center">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  Salvando...
-                                </div>
-                              ) : (
-                                <>
-                                  <Save className="h-4 w-4 mr-2" />
-                                  Salva Modifiche
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteItemMutation.mutate(item.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Categoria</Label>
+                    <Select value={editingItem.category} onValueChange={(value) => setEditingItem({...editingItem, category: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...CATEGORIES.food, ...CATEGORIES.home].map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Priorità</Label>
+                    <Select value={editingItem.priority} onValueChange={(value: any) => setEditingItem({...editingItem, priority: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bassa">Bassa</SelectItem>
+                        <SelectItem value="media">Media</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Members Dialog */}
-      <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
-        <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              Membri della Lista
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Gestisci i membri che possono accedere e modificare questa lista
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="p-4 bg-white/80 rounded-xl border border-blue-200/50">
-              <Label className="text-sm font-semibold text-blue-700 mb-2 block">Aggiungi nuovo membro</Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Email del nuovo membro"
-                  type="email"
-                  className="border-2 border-blue-200/50 rounded-xl"
-                />
-                <Button 
-                  onClick={addNewMember}
-                  disabled={addMemberMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 rounded-xl"
-                >
-                  {addMemberMutation.isPending ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <UserPlus className="h-4 w-4" />
-                  )}
+                <Button onClick={handleUpdateItem} className="w-full">
+                  Salva Modifiche
                 </Button>
               </div>
-            </div>
-            
-            <div className="divide-y divide-blue-100">
-              {sharedList.members.map((email: string, index: number) => (
-                <div key={index} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-medium">
-                      {email[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{email}</p>
-                      <p className="text-xs text-gray-500">
-                        {sharedList.owner_id === 'default' && index === 0 ? 'Proprietario' : 'Membro'}
-                      </p>
-                    </div>
-                  </div>
-                  {!(sharedList.owner_id === 'default' && index === 0) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => removeMemberMutation.mutate(email)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      disabled={removeMemberMutation.isPending}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Share Dialog */}
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent flex items-center gap-2">
-              <Share2 className="h-6 w-6 text-blue-600" />
-              Condividi Lista
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Condividi "{sharedList.name}" con altre persone per collaborare insieme
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="p-4 bg-white/80 rounded-xl border border-blue-200/50">
-              <Label className="text-sm font-semibold text-blue-700 mb-2 block">Link di condivisione</Label>
-              <div className="flex gap-2">
-                <Input 
-                  readOnly 
-                  value={`${window.location.origin}/shared/${id}`}
-                  className="border-2 border-blue-200/50 rounded-xl bg-gray-50"
-                />
-                <Button onClick={copyShareLink} variant="outline" className="border-2 border-blue-300 hover:bg-blue-50 rounded-xl">
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Gli utenti che aprono questo link potranno scaricare l'app e partecipare alla lista condivisa
-              </p>
-            </div>
-            
-            <Button 
-              onClick={shareViaEmail} 
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Mail className="h-5 w-5 mr-2" />
-              Condividi via Email
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Total Cost */}
-      {sharedList.items.length > 0 && (
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200/50 shadow-xl rounded-2xl animate-fade-in">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-2xl font-bold text-green-700 mb-2">💰 Costo Totale</h3>
-            <div className="text-4xl font-bold text-green-600">
-              €{sharedList.items.reduce((sum: number, item: any) => sum + item.cost, 0).toFixed(2)}
-            </div>
-            <p className="text-green-600 mt-2">
-              {sharedList.items.length} prodotti • {completedItems} completati
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {sharedList.items.length === 0 && (
-        <Card className="bg-white/90 backdrop-blur-sm border-2 border-blue-200/50 shadow-xl rounded-2xl animate-fade-in">
-          <CardContent className="p-12 text-center">
-            <div className="mb-6">
-              <TypeIcon className="h-16 w-16 mx-auto text-blue-400 animate-bounce" />
-            </div>
-            <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
-              Lista vuota
-            </h3>
-            <p className="text-muted-foreground mb-6 text-lg">
-              Aggiungi il primo prodotto per iniziare a collaborare!
-            </p>
-            <Button 
-              onClick={() => setShowAddDialog(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-3 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Aggiungi Primo Prodotto
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
     </div>
   );
 };

@@ -638,13 +638,22 @@ export const firebaseApi = {
     }
   },
 
-  createSharedList: async (data: Omit<SharedList, 'id' | 'owner_id' | 'created_at'>) => {
-    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
-    return await addDoc(collection(db, 'shared_lists'), {
-      ...data,
+  createSharedList: async (listData: Omit<SharedList, 'id' | 'created_at'>) => {
+    if (!db || !auth?.currentUser) {
+      throw new Error('Non autenticato');
+    }
+
+    const newList = {
+      ...listData,
       owner_id: auth.currentUser.uid,
-      created_at: new Date().toISOString()
-    });
+      created_at: new Date().toISOString(),
+      last_modified_by: auth.currentUser.email || auth.currentUser.uid,
+      last_modified_at: new Date().toISOString(),
+      chat_messages: []
+    };
+
+    const docRef = await addDoc(collection(db, 'shared_lists'), newList);
+    return { id: docRef.id, ...newList };
   },
 
   deleteSharedList: async (id: string) => {
@@ -862,6 +871,23 @@ export const firebaseApi = {
 
   respondToListRequest: async (requestId: string, accept: boolean) => {
     return respondToListRequest(requestId, accept);
+  },
+
+  // Funzioni per la collaborazione in tempo reale
+  addItemToSharedList: async (listId: string, item: Omit<SharedListItem, 'id' | 'created_by' | 'created_at' | 'last_modified_by' | 'last_modified_at'>) => {
+    return addItemToSharedList(listId, item);
+  },
+
+  deleteSharedListForUser: async (listId: string) => {
+    return deleteSharedListForUser(listId);
+  },
+
+  addChatMessage: async (listId: string, message: string) => {
+    return addChatMessage(listId, message);
+  },
+
+  getSharedListById: async (listId: string) => {
+    return getSharedListById(listId);
   },
 };
 
