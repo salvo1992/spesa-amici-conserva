@@ -751,11 +751,12 @@ export const searchUsers = async (email: string) => {
   }
 };
 
-export const shareRecipeWithUser = async (recipeId: string, targetUserEmail: string) => {
+export const shareRecipeWithUser = async (recipeId: string, targetUserEmail: string, recipeName: string) => {
   if (!auth.currentUser) throw new Error('User not authenticated');
   
   const shareData = {
     recipeId,
+    recipeName,
     fromUserId: auth.currentUser.uid,
     fromUserEmail: auth.currentUser.email,
     toUserEmail: targetUserEmail,
@@ -777,22 +778,21 @@ export const respondToSharedRecipe = async (shareId: string, accept: boolean) =>
   
   if (db) {
     const shareRef = doc(db, 'recipe_requests', shareId);
-    await updateDoc(shareRef, {
-      status: accept ? 'accepted' : 'rejected',
-      respondedAt: new Date().toISOString()
-    });
     
     if (accept) {
-      // Se accettata, ottieni i dati della richiesta per copiare la ricetta
+      // Prima ottieni i dati della richiesta per copiare la ricetta
       const shareDoc = await getDoc(shareRef);
       if (shareDoc.exists()) {
         const shareData = shareDoc.data();
+        
         // Ottieni la ricetta originale
         const recipeRef = doc(db, 'recipes', shareData.recipeId);
         const recipeDoc = await getDoc(recipeRef);
         
         if (recipeDoc.exists()) {
           const recipeData = recipeDoc.data();
+          console.log('Salvando ricetta accettata:', recipeData.name);
+          
           // Crea una copia della ricetta per l'utente destinatario
           await firebaseApi.createRecipe({
             name: recipeData.name,
@@ -806,6 +806,15 @@ export const respondToSharedRecipe = async (shareId: string, accept: boolean) =>
         }
       }
     }
+    
+    // Aggiorna lo status della richiesta dopo aver salvato la ricetta
+    await updateDoc(shareRef, {
+      status: accept ? 'accepted' : 'rejected',
+      respondedAt: new Date().toISOString()
+    });
+  } else {
+    // Simulazione per Firebase non configurato
+    console.log('Risposta simulata alla ricetta condivisa:', { shareId, accept });
   }
 };
 

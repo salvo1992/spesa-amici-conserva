@@ -176,7 +176,7 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
 
   const handleShareWithUser = async (targetUserEmail: string) => {
     try {
-      await shareRecipeWithUser(recipe.id, targetUserEmail);
+      await shareRecipeWithUser(recipe.id, targetUserEmail, recipe.name);
       setShowSentModal(true);
       setTimeout(() => {
         setShowSentModal(false);

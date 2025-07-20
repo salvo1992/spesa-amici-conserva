@@ -44,14 +44,15 @@ const Recipes = () => {
     category: ''
   });
 
-  // Carica i preferiti e ricette nascoste dal localStorage al mount
+  // Carica i preferiti dal localStorage al mount
   useEffect(() => {
     const savedFavorites = localStorage.getItem('recipe-favorites');
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
     }
     
-    const savedHiddenRecipes = localStorage.getItem('hidden-default-recipes');
+    // Carica le ricette nascoste dal sessionStorage (spariscono al reload completo)
+    const savedHiddenRecipes = sessionStorage.getItem('hidden-default-recipes');
     if (savedHiddenRecipes) {
       setHiddenDefaultRecipes(JSON.parse(savedHiddenRecipes));
     }
@@ -62,9 +63,9 @@ const Recipes = () => {
     localStorage.setItem('recipe-favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  // Salva le ricette nascoste nel localStorage quando cambiano
+  // Salva le ricette nascoste nel localStorage quando cambiano ma solo temporaneamente nella sessione
   useEffect(() => {
-    localStorage.setItem('hidden-default-recipes', JSON.stringify(hiddenDefaultRecipes));
+    sessionStorage.setItem('hidden-default-recipes', JSON.stringify(hiddenDefaultRecipes));
   }, [hiddenDefaultRecipes]);
 
   // Gestisce le ricette condivise tramite URL
@@ -750,9 +751,9 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
               size="sm" 
               variant="outline" 
               onClick={handleRestoreDefaultRecipes}
-              className="text-xs"
+              className="text-xs px-2 py-1 h-7 text-orange-600 border-orange-300 hover:bg-orange-50"
             >
-              Ripristina Ricette Default
+              Ripristina Default
             </Button>
           )}
           
