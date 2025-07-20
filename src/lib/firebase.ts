@@ -222,13 +222,19 @@ export const firebaseApi = {
   // Shopping List
   getShoppingItems: async (): Promise<ShoppingItem[]> => {
     if (!db || !auth?.currentUser) return [];
-    const q = query(
-      collection(db, 'shopping_items'),
-      where('user_id', '==', auth.currentUser.uid),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingItem));
+    try {
+      console.log('Recupero shopping items per utente:', auth.currentUser.uid);
+      const q = query(
+        collection(db, 'shopping_items'),
+        where('user_id', '==', auth.currentUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      console.log('Shopping items trovati:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingItem));
+    } catch (error) {
+      console.error('Errore recupero shopping items:', error);
+      return [];
+    }
   },
 
   createShoppingItem: async (data: Omit<ShoppingItem, 'id' | 'user_id' | 'created_at'>) => {
@@ -255,13 +261,19 @@ export const firebaseApi = {
   // Pantry
   getPantryItems: async (): Promise<PantryItem[]> => {
     if (!db || !auth?.currentUser) return [];
-    const q = query(
-      collection(db, 'pantry_items'),
-      where('user_id', '==', auth.currentUser.uid),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PantryItem));
+    try {
+      console.log('Recupero pantry items per utente:', auth.currentUser.uid);
+      const q = query(
+        collection(db, 'pantry_items'),
+        where('user_id', '==', auth.currentUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      console.log('Pantry items trovati:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PantryItem));
+    } catch (error) {
+      console.error('Errore recupero pantry items:', error);
+      return [];
+    }
   },
 
   createPantryItem: async (data: Omit<PantryItem, 'id' | 'user_id' | 'created_at'>) => {
@@ -288,13 +300,19 @@ export const firebaseApi = {
   // Recipes
   getRecipes: async (): Promise<Recipe[]> => {
     if (!db || !auth?.currentUser) return [];
-    const q = query(
-      collection(db, 'recipes'),
-      where('user_id', '==', auth.currentUser.uid),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+    try {
+      console.log('Recupero ricette per utente:', auth.currentUser.uid);
+      const q = query(
+        collection(db, 'recipes'),
+        where('user_id', '==', auth.currentUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      console.log('Ricette trovate:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+    } catch (error) {
+      console.error('Errore recupero ricette:', error);
+      return [];
+    }
   },
 
   createRecipe: async (data: Omit<Recipe, 'id' | 'user_id' | 'created_at'>) => {
@@ -315,13 +333,19 @@ export const firebaseApi = {
   // Family Members
   getFamilyMembers: async (): Promise<FamilyMember[]> => {
     if (!db || !auth?.currentUser) return [];
-    const q = query(
-      collection(db, 'family_members'),
-      where('user_id', '==', auth.currentUser.uid),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember));
+    try {
+      console.log('Recupero family members per utente:', auth.currentUser.uid);
+      const q = query(
+        collection(db, 'family_members'),
+        where('user_id', '==', auth.currentUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      console.log('Family members trovati:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember));
+    } catch (error) {
+      console.error('Errore recupero family members:', error);
+      return [];
+    }
   },
 
   createFamilyMember: async (data: Omit<FamilyMember, 'id' | 'user_id' | 'created_at'>) => {
@@ -394,13 +418,17 @@ export const firebaseApi = {
   // Reviews
   getReviews: async (): Promise<Review[]> => {
     if (!db) return [];
-    // Le recensioni sono pubbliche - visibili a tutti
-    const q = query(
-      collection(db, 'reviews'),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+    try {
+      console.log('Recupero tutte le recensioni');
+      // Le recensioni sono pubbliche - visibili a tutti
+      const q = query(collection(db, 'reviews'));
+      const snapshot = await getDocs(q);
+      console.log('Recensioni trovate:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+    } catch (error) {
+      console.error('Errore recupero recensioni:', error);
+      return [];
+    }
   },
 
   // Ottieni solo le recensioni dell'utente corrente (per gestione personale)
@@ -434,13 +462,19 @@ export const firebaseApi = {
   // Shared Lists
   getSharedLists: async (): Promise<SharedList[]> => {
     if (!db || !auth?.currentUser) return [];
-    const q = query(
-      collection(db, 'shared_lists'),
-      where('members', 'array-contains', auth.currentUser.email),
-      orderBy('created_at', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SharedList));
+    try {
+      console.log('Recupero liste condivise per utente:', auth.currentUser.email);
+      const q = query(
+        collection(db, 'shared_lists'),
+        where('members', 'array-contains', auth.currentUser.email)
+      );
+      const snapshot = await getDocs(q);
+      console.log('Liste condivise trovate:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SharedList));
+    } catch (error) {
+      console.error('Errore recupero liste condivise:', error);
+      return [];
+    }
   },
 
   createSharedList: async (data: Omit<SharedList, 'id' | 'owner_id' | 'created_at'>) => {
