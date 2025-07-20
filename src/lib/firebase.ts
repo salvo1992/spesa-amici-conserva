@@ -125,6 +125,15 @@ export interface Review {
   created_at: string;
 }
 
+export interface Comment {
+  id: string;
+  review_id: string;
+  user_id: string;
+  user_name: string;
+  comment: string;
+  created_at: string;
+}
+
 export interface SharedList {
   id: string;
   owner_id: string;
@@ -492,6 +501,96 @@ export const firebaseApi = {
     if (!db) throw new Error('Database non disponibile');
     const docRef = doc(db, 'reviews', id);
     return await deleteDoc(docRef);
+  },
+
+  // Comments for Reviews
+  getComments: async (reviewId: string): Promise<Comment[]> => {
+    if (!db) return [];
+    try {
+      console.log('Recupero commenti per recensione:', reviewId);
+      const q = query(
+        collection(db, 'comments'),
+        where('review_id', '==', reviewId),
+        orderBy('created_at', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      console.log('Commenti trovati:', snapshot.docs.length);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+    } catch (error) {
+      console.error('Errore recupero commenti:', error);
+      return [];
+    }
+  },
+
+  createComment: async (data: Omit<Comment, 'id' | 'created_at'>) => {
+    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    return await addDoc(collection(db, 'comments'), {
+      ...data,
+      created_at: new Date().toISOString()
+    });
+  },
+
+  deleteComment: async (id: string) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'comments', id);
+    return await deleteDoc(docRef);
+  },
+
+  // Update review helpful count
+  updateReviewHelpfulCount: async (reviewId: string, increment: boolean) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'reviews', reviewId);
+    const reviewDoc = await getDoc(docRef);
+    if (reviewDoc.exists()) {
+      const currentCount = reviewDoc.data().helpful_count || 0;
+      const newCount = increment ? currentCount + 1 : Math.max(0, currentCount - 1);
+      return await updateDoc(docRef, { helpful_count: newCount });
+    }
+  },
+
+  // User votes tracking
+  getUserVote: async (reviewId: string): Promise<boolean> => {
+    if (!db || !auth?.currentUser) return false;
+    try {
+      const q = query(
+        collection(db, 'user_votes'),
+        where('user_id', '==', auth.currentUser.uid),
+        where('review_id', '==', reviewId)
+      );
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
+    } catch (error) {
+      console.error('Errore controllo voto utente:', error);
+      return false;
+    }
+  },
+
+  toggleUserVote: async (reviewId: string): Promise<boolean> => {
+    if (!db || !auth?.currentUser) throw new Error('Non autenticato');
+    
+    const q = query(
+      collection(db, 'user_votes'),
+      where('user_id', '==', auth.currentUser.uid),
+      where('review_id', '==', reviewId)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      // Aggiungi voto
+      await addDoc(collection(db, 'user_votes'), {
+        user_id: auth.currentUser.uid,
+        review_id: reviewId,
+        created_at: new Date().toISOString()
+      });
+      await firebaseApi.updateReviewHelpfulCount(reviewId, true);
+      return true;
+    } else {
+      // Rimuovi voto
+      const voteDoc = snapshot.docs[0];
+      await deleteDoc(voteDoc.ref);
+      await firebaseApi.updateReviewHelpfulCount(reviewId, false);
+      return false;
+    }
   },
 
   // Shared Lists
