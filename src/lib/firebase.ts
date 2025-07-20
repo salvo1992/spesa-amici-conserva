@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updateProfile } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -183,7 +183,7 @@ export const firebaseAuth = {
     }
   },
 
-  register: async (email: string, password: string) => {
+  register: async (email: string, password: string, name?: string) => {
     if (!auth) {
       console.error('Firebase auth non configurato');
       throw new Error('Firebase non configurato');
@@ -192,6 +192,15 @@ export const firebaseAuth = {
     try {
       console.log('Tentativo registrazione per:', email);
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Imposta il nome nel profilo se fornito
+      if (name && result.user) {
+        await updateProfile(result.user, {
+          displayName: name
+        });
+        console.log('Nome utente aggiornato:', name);
+      }
+      
       console.log('Registrazione successful:', result.user.uid);
       return result;
     } catch (error: any) {

@@ -101,7 +101,8 @@ const AuthForm = () => {
 
       const result = await firebaseAuth.register(
         registerForm.email, 
-        registerForm.password
+        registerForm.password,
+        registerForm.name
       );
       const userData = {
         uid: result.user.uid,
