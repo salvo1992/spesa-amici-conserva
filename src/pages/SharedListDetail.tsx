@@ -42,10 +42,12 @@ const SharedListDetail = () => {
   });
 
   useEffect(() => {
-    loadSharedList();
-    // Aggiorna ogni 5 secondi per la collaborazione in tempo reale
-    const interval = setInterval(loadSharedList, 5000);
-    return () => clearInterval(interval);
+    if (listId) {
+      loadSharedList();
+      // Ridotto intervallo di aggiornamento per migliori performance
+      const interval = setInterval(loadSharedList, 10000);
+      return () => clearInterval(interval);
+    }
   }, [listId]);
 
   const loadSharedList = async () => {
@@ -320,6 +322,20 @@ const SharedListDetail = () => {
                       </div>
                     </DialogContent>
                   </Dialog>
+                  
+                  <Button 
+                    onClick={() => {
+                      const shareMessage = `Ti invito a collaborare sulla lista "${list.name}"! Scarica l'app e unisciti: ${window.location.origin}/shared/${listId}`;
+                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+                      window.open(whatsappUrl, '_blank');
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Invita su WhatsApp
+                  </Button>
                   
                   <Button 
                     variant="destructive" 
