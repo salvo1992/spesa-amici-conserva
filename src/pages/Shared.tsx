@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Share2, Plus, Users, ShoppingCart, Package, Calendar, Trash2, UserPlus, CheckCircle, ExternalLink, Bell, Copy, MessageSquare } from 'lucide-react';
+import { Share2, Plus, Users, ShoppingCart, Package, Calendar, Trash2, UserPlus, CheckCircle, ExternalLink, Bell, Copy, MessageSquare, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type SharedList } from '@/lib/firebase';
@@ -20,7 +20,9 @@ const Shared = () => {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [selectedList, setSelectedList] = useState<any>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [newList, setNewList] = useState({
     name: '',
@@ -28,7 +30,7 @@ const Shared = () => {
     members: ['']
   });
 
-  // Liste di default ottimizzate
+  // Liste di default ottimizzate con useMemo per evitare re-render
   const defaultLists = useMemo(() => [
     {
       id: 'default-1',
@@ -66,33 +68,77 @@ const Shared = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: userSharedLists = [], isLoading } = useQuery({
+  const { data: userSharedLists = [], isLoading, error } = useQuery({
     queryKey: ['shared-lists'],
-    queryFn: firebaseApi.getSharedLists,
+    queryFn: async () => {
+      try {
+        const result = await firebaseApi.getSharedLists();
+        return result;
+      } catch (error) {
+        console.error('Errore caricamento liste:', error);
+        if (error?.message?.includes('BloomFilter')) {
+          // Ignora errori BloomFilter di Firestore
+          return [];
+        }
+        throw error;
+      }
+    },
     enabled: isAuthenticated,
-    refetchInterval: false, // Disabilita refetch automatico
-    staleTime: 5 * 60 * 1000, // 5 minuti
+    refetchInterval: false,
+    staleTime: 10 * 60 * 1000, // 10 minuti
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('BloomFilter')) return false;
+      return failureCount < 2;
+    }
   });
 
   const { data: pendingRequests = [] } = useQuery({
     queryKey: ['list-requests', 'pending'],
     queryFn: firebaseApi.getPendingListRequests,
     enabled: isAuthenticated,
-    refetchInterval: 30000, // Solo ogni 30 secondi per le richieste
-    staleTime: 10 * 1000
+    refetchInterval: 60000, // Solo ogni 60 secondi
+    staleTime: 30 * 1000,
+    retry: false
   });
+
+  // Cleanup su unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Combina liste default con quelle dell'utente
   const allSharedLists = useMemo(() => [...defaultLists, ...userSharedLists], [defaultLists, userSharedLists]);
 
   const createMutation = useMutation({
-    mutationFn: firebaseApi.createSharedList,
+    mutationFn: async (listData: any) => {
+      // Cancella richiesta precedente se esistente
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      abortControllerRef.current = new AbortController();
+      
+      try {
+        setIsCreating(true);
+        const result = await firebaseApi.createSharedList(listData);
+        return result;
+      } finally {
+        setIsCreating(false);
+      }
+    },
     onSuccess: () => {
-      // Delay per prevenire race conditions DOM
-      setTimeout(() => {
-        setShowAddDialog(false);
-        setNewList({ name: '', type: 'shopping', members: [''] });
-      }, 150);
+      // Gestione sicura della chiusura dialog
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setShowAddDialog(false);
+          setNewList({ name: '', type: 'shopping', members: [''] });
+          setIsCreating(false);
+        }, 200);
+      });
       
       queryClient.invalidateQueries({ queryKey: ['shared-lists'] });
       toast({ 
@@ -101,12 +147,22 @@ const Shared = () => {
       });
     },
     onError: (error) => {
+      setIsCreating(false);
       console.error('Error creating shared list:', error);
-      toast({ 
-        title: "❌ Errore", 
-        description: "Impossibile creare la lista condivisa",
-        variant: "destructive" 
-      });
+      
+      if (error?.message?.includes('BloomFilter')) {
+        toast({ 
+          title: "⚠️ Attenzione", 
+          description: "Lista creata ma potrebbero esserci ritardi nella sincronizzazione",
+          variant: "default"
+        });
+      } else {
+        toast({ 
+          title: "❌ Errore", 
+          description: "Impossibile creare la lista condivisa. Riprova tra poco.",
+          variant: "destructive" 
+        });
+      }
     }
   });
 
@@ -148,7 +204,7 @@ const Shared = () => {
       return;
     }
     
-    if (createMutation.isPending) return; // Prevent double-click
+    if (createMutation.isPending || isCreating) return; // Prevent double-click
     
     createMutation.mutate({
       name: newList.name,
@@ -158,10 +214,19 @@ const Shared = () => {
       items: [],
       total_cost: 0
     });
-  }, [newList, createMutation]);
+  }, [newList, createMutation, isCreating]);
 
   const handleOpenList = useCallback((list: any) => {
-    navigate(`/shared/${list.id}`);
+    try {
+      navigate(`/shared/${list.id}`);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      toast({
+        title: "⚠️ Errore",
+        description: "Impossibile aprire la lista",
+        variant: "destructive"
+      });
+    }
   }, [navigate]);
 
   const handleShareList = useCallback((list: any) => {
@@ -170,23 +235,61 @@ const Shared = () => {
   }, []);
 
   const copyShareLink = useCallback(() => {
-    const shareUrl = `${window.location.origin}/shared/${selectedList?.id}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast({ 
-      title: "📋 Link copiato!", 
-      description: "Il link di condivisione è stato copiato negli appunti" 
-    });
+    try {
+      const shareUrl = `${window.location.origin}/shared/${selectedList?.id}`;
+      navigator.clipboard.writeText(shareUrl);
+      toast({ 
+        title: "📋 Link copiato!", 
+        description: "Il link di condivisione è stato copiato negli appunti" 
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile copiare il link",
+        variant: "destructive"
+      });
+    }
   }, [selectedList]);
 
   const shareViaWhatsApp = useCallback(() => {
-    const shareMessage = `🎯 Ti invito a collaborare sulla lista "${selectedList?.name}"!\n\n📱 Scarica l'app e unisciti qui:\n${window.location.origin}/shared/${selectedList?.id}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
-    window.open(whatsappUrl, '_blank');
+    try {
+      const shareMessage = `🎯 Ti invito a collaborare sulla lista "${selectedList?.name}"!\n\n📱 Scarica l'app e unisciti qui:\n${window.location.origin}/shared/${selectedList?.id}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile aprire WhatsApp",
+        variant: "destructive"
+      });
+    }
   }, [selectedList]);
 
   const getTypeIcon = useCallback((type: string) => {
     return type === 'shopping' ? ShoppingCart : Package;
   }, []);
+
+  // Show error state
+  if (error && !error?.message?.includes('BloomFilter')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <CardTitle className="text-red-800">Errore di Connessione</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Impossibile caricare le liste condivise. Controlla la connessione internet.
+            </p>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Riprova
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -227,7 +330,8 @@ const Shared = () => {
                 <DialogTrigger asChild>
                   <Button 
                     size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                    disabled={isCreating}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                     <span className="hidden sm:inline">Nuova Lista</span>
@@ -251,12 +355,17 @@ const Shared = () => {
                         onChange={(e) => setNewList({...newList, name: e.target.value})}
                         placeholder="Es. Spesa della settimana"
                         className="mt-1"
+                        disabled={isCreating}
                       />
                     </div>
 
                     <div>
                       <Label className="text-sm font-medium">Tipo Lista</Label>
-                      <Select value={newList.type} onValueChange={(value: any) => setNewList({...newList, type: value})}>
+                      <Select 
+                        value={newList.type} 
+                        onValueChange={(value: any) => setNewList({...newList, type: value})}
+                        disabled={isCreating}
+                      >
                         <SelectTrigger className="mt-1">
                           <SelectValue />
                         </SelectTrigger>
@@ -275,6 +384,7 @@ const Shared = () => {
                           size="sm" 
                           variant="outline"
                           onClick={addMember}
+                          disabled={isCreating}
                           className="hover:scale-105 transition-transform"
                         >
                           <UserPlus className="h-4 w-4 mr-1" /> Aggiungi
@@ -287,6 +397,7 @@ const Shared = () => {
                             value={member}
                             onChange={(e) => updateMember(index, e.target.value)}
                             placeholder="email@esempio.com"
+                            disabled={isCreating}
                           />
                         ))}
                       </div>
@@ -294,10 +405,10 @@ const Shared = () => {
 
                     <Button 
                       onClick={createSharedList} 
-                      disabled={createMutation.isPending} 
+                      disabled={createMutation.isPending || isCreating} 
                       className="w-full"
                     >
-                      {createMutation.isPending ? (
+                      {(createMutation.isPending || isCreating) ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           Creando...
@@ -374,6 +485,7 @@ const Shared = () => {
                         variant="ghost"
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                         onClick={() => deleteMutation.mutate(list.id)}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
