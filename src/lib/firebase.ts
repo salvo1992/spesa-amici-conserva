@@ -140,8 +140,34 @@ export interface SharedList {
   name: string;
   type: 'shopping' | 'pantry';
   members: string[];
-  items: any[];
+  items: SharedListItem[];
   total_cost: number;
+  created_at: string;
+  last_modified_by?: string;
+  last_modified_at?: string;
+  chat_messages?: ChatMessage[];
+}
+
+export interface SharedListItem {
+  id: string;
+  name: string;
+  quantity: string;
+  category: string;
+  priority?: 'alta' | 'media' | 'bassa';
+  cost: number;
+  completed: boolean;
+  created_by: string;
+  created_at: string;
+  last_modified_by: string;
+  last_modified_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  list_id: string;
+  user_email: string;
+  user_name: string;
+  message: string;
   created_at: string;
 }
 
@@ -1036,7 +1062,8 @@ export const respondToListRequest = async (requestId: string, accept: boolean) =
       created_at: new Date().toISOString(),
       shared_from: requestData.sender_email,
       last_modified_by: auth.currentUser.email,
-      last_modified_at: new Date().toISOString()
+      last_modified_at: new Date().toISOString(),
+      chat_messages: []
     };
     
     delete newList.id; // Rimuove l'ID originale per crearne uno nuovo
@@ -1048,4 +1075,155 @@ export const respondToListRequest = async (requestId: string, accept: boolean) =
     status: accept ? 'accepted' : 'rejected',
     responded_at: new Date().toISOString()
   });
+};
+
+// Funzioni per la collaborazione in tempo reale delle liste
+export const addItemToSharedList = async (listId: string, item: Omit<SharedListItem, 'id' | 'created_by' | 'created_at' | 'last_modified_by' | 'last_modified_at'>) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  const listDoc = await getDoc(listRef);
+  
+  if (!listDoc.exists()) {
+    throw new Error('Lista non trovata');
+  }
+
+  const currentUser = auth.currentUser;
+  const newItem: SharedListItem = {
+    ...item,
+    id: Date.now().toString(),
+    created_by: currentUser.email || currentUser.uid,
+    created_at: new Date().toISOString(),
+    last_modified_by: currentUser.email || currentUser.uid,
+    last_modified_at: new Date().toISOString()
+  };
+
+  const listData = listDoc.data();
+  const updatedItems = [...(listData.items || []), newItem];
+  const updatedTotalCost = updatedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
+
+  await updateDoc(listRef, {
+    items: updatedItems,
+    total_cost: updatedTotalCost,
+    last_modified_by: currentUser.email || currentUser.uid,
+    last_modified_at: new Date().toISOString()
+  });
+};
+
+export const updateSharedListItem = async (listId: string, itemId: string, updates: Partial<SharedListItem>) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  const listDoc = await getDoc(listRef);
+  
+  if (!listDoc.exists()) {
+    throw new Error('Lista non trovata');
+  }
+
+  const currentUser = auth.currentUser;
+  const listData = listDoc.data();
+  const updatedItems = (listData.items || []).map((item: SharedListItem) => 
+    item.id === itemId 
+      ? { 
+          ...item, 
+          ...updates,
+          last_modified_by: currentUser.email || currentUser.uid,
+          last_modified_at: new Date().toISOString()
+        }
+      : item
+  );
+
+  const updatedTotalCost = updatedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
+
+  await updateDoc(listRef, {
+    items: updatedItems,
+    total_cost: updatedTotalCost,
+    last_modified_by: currentUser.email || currentUser.uid,
+    last_modified_at: new Date().toISOString()
+  });
+};
+
+export const deleteSharedListItem = async (listId: string, itemId: string) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  const listDoc = await getDoc(listRef);
+  
+  if (!listDoc.exists()) {
+    throw new Error('Lista non trovata');
+  }
+
+  const currentUser = auth.currentUser;
+  const listData = listDoc.data();
+  const updatedItems = (listData.items || []).filter((item: SharedListItem) => item.id !== itemId);
+  const updatedTotalCost = updatedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
+
+  await updateDoc(listRef, {
+    items: updatedItems,
+    total_cost: updatedTotalCost,
+    last_modified_by: currentUser.email || currentUser.uid,
+    last_modified_at: new Date().toISOString()
+  });
+};
+
+export const deleteSharedListForUser = async (listId: string) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  await deleteDoc(listRef);
+};
+
+export const addChatMessage = async (listId: string, message: string) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  const listDoc = await getDoc(listRef);
+  
+  if (!listDoc.exists()) {
+    throw new Error('Lista non trovata');
+  }
+
+  const currentUser = auth.currentUser;
+  const newMessage: ChatMessage = {
+    id: Date.now().toString(),
+    list_id: listId,
+    user_email: currentUser.email || currentUser.uid,
+    user_name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Utente',
+    message,
+    created_at: new Date().toISOString()
+  };
+
+  const listData = listDoc.data();
+  const updatedMessages = [...(listData.chat_messages || []), newMessage];
+
+  await updateDoc(listRef, {
+    chat_messages: updatedMessages,
+    last_modified_by: currentUser.email || currentUser.uid,
+    last_modified_at: new Date().toISOString()
+  });
+};
+
+export const getSharedListById = async (listId: string): Promise<SharedList | null> => {
+  if (!db) {
+    throw new Error('Database non disponibile');
+  }
+
+  const listRef = doc(db, 'shared_lists', listId);
+  const listDoc = await getDoc(listRef);
+  
+  if (!listDoc.exists()) {
+    return null;
+  }
+
+  return { id: listDoc.id, ...listDoc.data() } as SharedList;
 };

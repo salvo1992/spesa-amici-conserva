@@ -147,7 +147,7 @@ const ShoppingList = () => {
     
     const total = uncheckedItems.reduce((sum, item) => sum + item.cost, 0);
     
-    const message = `🛒 *Lista della Spesa* 🛒\n\n${itemsList}\n\n💰 *Totale stimato:* €${total.toFixed(2)}\n\n📱 Inviato da Food Manager`;
+    const message = `🛒 *Lista della Spesa* 🛒\n\n${itemsList}\n\n💰 *Totale stimato:* €${total.toFixed(2)}\n\n📱 Scarica Food Manager: ${window.location.origin}`;
     
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -156,7 +156,7 @@ const ShoppingList = () => {
     
     toast({
       title: "📱 Lista condivisa!",
-      description: "La lista è stata aperta in WhatsApp",
+      description: "La lista è stata aperta in WhatsApp per invitare a scaricare l'app",
     });
   };
 
