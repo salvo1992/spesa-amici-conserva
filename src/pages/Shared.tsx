@@ -159,18 +159,18 @@ const Shared = () => {
   return (
     <div className="p-4 space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
       {/* Animated Header */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-blue-200/50 animate-fade-in">
-        <div className="flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-xl border border-blue-200/50 animate-fade-in">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <Share2 className="h-10 w-10 text-blue-600 animate-pulse" />
+              <Share2 className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600 animate-pulse" />
               <div className="absolute -inset-1 bg-blue-200/50 rounded-full animate-ping"></div>
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-800 bg-clip-text text-transparent animate-fade-in">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-800 bg-clip-text text-transparent animate-fade-in">
                 🤝 Liste Condivise
               </h1>
-              <p className="text-muted-foreground mt-2 text-lg animate-slide-up">
+              <p className="text-muted-foreground mt-2 text-sm sm:text-base md:text-lg animate-slide-up">
                 {allSharedLists.length} liste collaborative attive
               </p>
             </div>
@@ -180,11 +180,11 @@ const Shared = () => {
             <DialogTrigger asChild>
               <Button 
                 size="lg"
-                className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-500 hover:scale-105 group"
+                className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-semibold px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-500 hover:scale-105 group w-full sm:w-auto"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="relative z-10">Nuova Lista Condivisa</span>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                <span className="relative z-10 text-sm sm:text-base">Nuova Lista Condivisa</span>
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
               </Button>
             </DialogTrigger>

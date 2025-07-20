@@ -175,19 +175,22 @@ const MealPlanning = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header con titolo più grande e stilizzato */}
         <div className="mb-8 text-center animate-fade-in">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="relative">
-              <ChefHat className="h-12 w-12 text-red-600 dark:text-red-400 animate-bounce" />
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full animate-ping"></div>
+          <div className="flex flex-col items-center mb-4">
+            {/* Icone sopra il titolo su mobile */}
+            <div className="flex items-center justify-center gap-4 sm:gap-8 mb-4 sm:mb-6">
+              <div className="relative">
+                <ChefHat className="h-8 w-8 sm:h-12 sm:w-12 text-red-600 dark:text-red-400 animate-bounce" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded-full animate-ping"></div>
+              </div>
+              <div className="p-2 sm:p-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl shadow-lg">
+                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400 animate-pulse" />
+              </div>
             </div>
-            <h1 className="text-6xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent animate-slide-up tracking-tight drop-shadow-lg">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 dark:from-red-400 dark:via-orange-400 dark:to-yellow-400 bg-clip-text text-transparent animate-slide-up tracking-tight drop-shadow-lg">
               Piano Alimentare Settimanale
             </h1>
-            <div className="ml-4 p-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl shadow-lg">
-              <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400 animate-pulse" />
-            </div>
           </div>
-          <div className="text-xl text-muted-foreground animate-fade-in max-w-2xl mx-auto font-medium">
+          <div className="text-base sm:text-lg md:text-xl text-muted-foreground animate-fade-in max-w-2xl mx-auto font-medium px-4">
             Organizza i pasti per tutta la famiglia con facilità e precisione
           </div>
         </div>

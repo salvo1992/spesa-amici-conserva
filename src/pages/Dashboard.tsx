@@ -92,10 +92,21 @@ const Dashboard = () => {
               <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">Ecco la panoramica della tua cucina magica ✨</p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold shadow-lg">
-                <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Tutto OK
-              </Badge>
+              <div className="group relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse"></div>
+                <Badge className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 px-4 py-2 text-sm font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 cursor-pointer overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="flex items-center gap-2 relative z-10">
+                    <Star className="h-4 w-4 animate-spin" style={{ animationDuration: '3s' }} />
+                    <span className="bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent font-extrabold">Tutto Fantastico!</span>
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
