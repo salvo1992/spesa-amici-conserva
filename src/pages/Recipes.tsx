@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Share2, Facebook, Instagram, Edit2, Trash2, MessageCircle, Mail, Send, UserPlus } from 'lucide-react';
+import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Facebook, Instagram, Edit2, Trash2, MessageCircle, Mail, Send, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
@@ -22,15 +22,13 @@ const Recipes = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
   const [showShareUsersDialog, setShowShareUsersDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [shareEmail, setShareEmail] = useState('');
-  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<{id: string, name: string, surname: string}[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
 
   const [newRecipe, setNewRecipe] = useState({
@@ -529,10 +527,6 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
             });
           }
           return;
-        case 'email':
-          setSelectedRecipe(recipe);
-          setShowShareDialog(true);
-          return;
       }
       
       if (shareUrl) {
@@ -644,11 +638,14 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
   const handleShareWithUser = async () => {
     if (!selectedUser.trim() || !selectedRecipe) return;
     
+    const user = registeredUsers.find(u => u.id === selectedUser);
+    if (!user) return;
+    
     try {
-      await firebaseApi.shareRecipeWithUser(selectedRecipe, selectedUser);
+      await firebaseApi.shareRecipeWithUser(selectedRecipe, user.id, `${user.name} ${user.surname}`);
       toast({
         title: "🎉 Ricetta condivisa!",
-        description: `Ricetta inviata a ${selectedUser}. Riceverà una notifica per accettarla.`
+        description: `Ricetta inviata a ${user.name} ${user.surname}. Riceverà una notifica per accettarla.`
       });
       setSelectedUser('');
       setShowShareUsersDialog(false);
@@ -661,54 +658,6 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
     }
   };
 
-  const handleShareByEmail = () => {
-    if (!shareEmail.trim() || !selectedRecipe) return;
-    
-    const subject = `🍽️ ${selectedRecipe.name} - Ricetta da Food Manager`;
-    const body = `Ciao!
-
-Ho pensato che questa ricetta ti potrebbe interessare:
-
-🌟 **${selectedRecipe.name}**
-
-${selectedRecipe.description}
-
-⏱️ Tempo di preparazione: ${selectedRecipe.prep_time} minuti
-👥 Porzioni: ${selectedRecipe.servings}
-
-🔥 **Ingredienti:**
-${selectedRecipe.ingredients.map(ing => `• ${ing}`).join('\n')}
-
-📝 **Preparazione:**
-${selectedRecipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n\n')}
-
----
-
-📱 **Vuoi aggiungere questa ricetta al tuo Food Manager?**
-Clicca qui per aggiungerla automaticamente: ${window.location.origin}/recipes?add=${encodeURIComponent(JSON.stringify({
-      name: selectedRecipe.name,
-      description: selectedRecipe.description,
-      ingredients: selectedRecipe.ingredients,
-      instructions: selectedRecipe.instructions,
-      prep_time: selectedRecipe.prep_time,
-      servings: selectedRecipe.servings,
-      category: selectedRecipe.category
-    }))}
-
-Se non hai ancora Food Manager, scaricalo gratuitamente: ${window.location.origin}
-
-Buona cucina! 🍳`;
-
-    const mailtoUrl = `mailto:${shareEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoUrl, '_blank');
-    
-    toast({
-      title: "📧 Email preparata!",
-      description: `Email di condivisione aperta per ${shareEmail}`
-    });
-    setShareEmail('');
-    setShowShareDialog(false);
-  };
 
   const filteredRecipes = allRecipes.filter(recipe => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -992,16 +941,6 @@ Buona cucina! 🍳`;
                     </>
                   )}
                   
-                  <div className="relative">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-700 dark:text-orange-300"
-                      onClick={() => handleShareRecipe(recipe)}
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1065,15 +1004,6 @@ Buona cucina! 🍳`;
                   title="Condividi su Instagram"
                 >
                   <Instagram className="h-4 w-4 text-pink-600" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareRecipe(selectedRecipe!, 'email')}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-900/20"
-                  title="Condividi via Email"
-                >
-                  <Mail className="h-4 w-4 text-gray-600" />
                 </Button>
               </div>
             </div>
@@ -1260,30 +1190,6 @@ Buona cucina! 🍳`;
         </DialogContent>
       </Dialog>
 
-      {/* Share by Email Dialog */}
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Condividi Ricetta via Email</DialogTitle>
-            <p className="text-sm text-muted-foreground">Invia la ricetta a un amico tramite email</p>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Email destinatario</Label>
-              <Input
-                type="email"
-                value={shareEmail}
-                onChange={(e) => setShareEmail(e.target.value)}
-                placeholder="amico@esempio.com"
-              />
-            </div>
-            <Button onClick={handleShareByEmail} disabled={!shareEmail.trim()} className="w-full">
-              <Mail className="h-4 w-4 mr-2" />
-              Invia Ricetta
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Share with Users Dialog */}
       <Dialog open={showShareUsersDialog} onOpenChange={setShowShareUsersDialog}>
@@ -1301,8 +1207,8 @@ Buona cucina! 🍳`;
                 </SelectTrigger>
                 <SelectContent>
                   {registeredUsers.map((user) => (
-                    <SelectItem key={user} value={user}>
-                      {user}
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} {user.surname}
                     </SelectItem>
                   ))}
                 </SelectContent>

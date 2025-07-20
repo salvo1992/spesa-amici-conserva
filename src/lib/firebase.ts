@@ -666,26 +666,26 @@ export const firebaseApi = {
     }
   },
 
-  // Funzione per ottenere utenti registrati (simulata)
-  getRegisteredUsers: async (): Promise<string[]> => {
+  // Funzione per ottenere utenti registrati con nome e cognome
+  getRegisteredUsers: async (): Promise<{id: string, name: string, surname: string}[]> => {
     // In una implementazione reale, questo recupererebbe la lista degli utenti registrati dal database
-    // Per ora simuliamo alcuni utenti di esempio
+    // Per ora simuliamo alcuni utenti di esempio con nome e cognome
     return [
-      'marco.rossi@email.com',
-      'giulia.bianchi@email.com', 
-      'alessandro.verdi@email.com',
-      'francesca.neri@email.com',
-      'luca.ferrari@email.com'
+      {id: 'user1', name: 'Marco', surname: 'Rossi'},
+      {id: 'user2', name: 'Giulia', surname: 'Bianchi'}, 
+      {id: 'user3', name: 'Alessandro', surname: 'Verdi'},
+      {id: 'user4', name: 'Francesca', surname: 'Neri'},
+      {id: 'user5', name: 'Luca', surname: 'Ferrari'}
     ];
   },
 
   // Funzione per condividere ricetta con utente registrato
-  shareRecipeWithUser: async (recipeData: Recipe, userEmail: string) => {
+  shareRecipeWithUser: async (recipeData: Recipe, userId: string, userName: string) => {
     if (!db) throw new Error('Database non disponibile');
     try {
       // In una implementazione reale, questo invierebbe una notifica all'utente
       // e aggiungerebbe la ricetta alle sue ricette condivise
-      console.log(`Condividendo ricetta "${recipeData.name}" con ${userEmail}`);
+      console.log(`Condividendo ricetta "${recipeData.name}" con ${userName} (ID: ${userId})`);
       return Promise.resolve();
     } catch (error) {
       console.error('Error sharing recipe with user:', error);
