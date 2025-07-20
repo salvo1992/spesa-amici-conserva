@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus, Clock, Sparkles, Star, Calendar } from 'lucide-react';
+import { ShoppingCart, Package, ChefHat, Users, TrendingUp, AlertTriangle, Plus, Clock, Sparkles, Star, Calendar, Euro, TrendingDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { firebaseApi } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -182,6 +182,70 @@ const Dashboard = () => {
               <Calendar className="h-5 w-5 mr-3" />
               Pianifica Pasti
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Panoramica Costi Spesa */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl animate-fade-in relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5"></div>
+          <CardHeader className="relative z-10">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl">
+                <Euro className="h-6 w-6 text-white" />
+              </div>
+              Panoramica Costi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <ShoppingCart className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Spesa Attiva</p>
+                    <p className="text-2xl font-bold text-blue-800">€{(stats?.activeCost || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl border border-emerald-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Totale Speso</p>
+                    <p className="text-2xl font-bold text-emerald-800">€{(stats?.totalSpent || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <TrendingDown className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Media per Prodotto</p>
+                    <p className="text-2xl font-bold text-purple-800">€{(stats?.averageSpent || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-700">Prodotti Acquistati</h4>
+                  <p className="text-sm text-gray-500 mt-1">Totale prodotti completati dalla lista</p>
+                </div>
+                <Badge variant="secondary" className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-4 py-2 text-lg font-bold">
+                  {stats?.completedItems || 0}
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -500,7 +500,11 @@ export const firebaseApi = {
       recipes: 0,
       sharedLists: 0,
       expiringSoon: 0,
-      recentActivity: []
+      recentActivity: [],
+      activeCost: 0,
+      totalSpent: 0,
+      averageSpent: 0,
+      completedItems: 0
     };
 
     const [shoppingItems, pantryItems, recipes, sharedLists] = await Promise.all([
@@ -517,6 +521,13 @@ export const firebaseApi = {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays <= 7 && diffDays >= 0;
     }).length;
+
+    // Calcoli per i costi della spesa
+    const activeItems = shoppingItems.filter(item => !item.completed);
+    const completedItems = shoppingItems.filter(item => item.completed);
+    const activeCost = activeItems.reduce((sum, item) => sum + (item.cost || 0), 0);
+    const totalSpent = completedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
+    const averageSpent = completedItems.length > 0 ? totalSpent / completedItems.length : 0;
 
     const recentActivity = [
       ...shoppingItems.slice(0, 2).map(item => ({
@@ -537,7 +548,11 @@ export const firebaseApi = {
       recipes: recipes.length,
       sharedLists: sharedLists.length,
       expiringSoon,
-      recentActivity
+      recentActivity,
+      activeCost,
+      totalSpent,
+      averageSpent,
+      completedItems: completedItems.length
     };
   },
 
