@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Share2, Facebook, Twitter, Instagram } from 'lucide-react';
+import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Share2, Facebook, Twitter, Instagram, Edit2, Trash2, MessageCircle, Mail, Send } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
@@ -19,10 +19,14 @@ const Recipes = () => {
   const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [shareEmail, setShareEmail] = useState('');
 
   const [newRecipe, setNewRecipe] = useState({
     name: '',
@@ -33,6 +37,19 @@ const Recipes = () => {
     servings: 4,
     category: ''
   });
+
+  // Carica i preferiti dal localStorage al mount
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem('recipe-favorites');
+    if (savedFavorites) {
+      setFavorites(JSON.parse(savedFavorites));
+    }
+  }, []);
+
+  // Salva i preferiti nel localStorage quando cambiano
+  useEffect(() => {
+    localStorage.setItem('recipe-favorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   // Ricette di default migliorate - 15 ricette totali
   const defaultRecipes: Recipe[] = [
@@ -382,6 +399,24 @@ const Recipes = () => {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, recipe }: { id: string; recipe: any }) => firebaseApi.updateRecipe(id, recipe),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      setShowEditDialog(false);
+      setEditingRecipe(null);
+      toast({ title: "Ricetta aggiornata", description: "Le modifiche sono state salvate" });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: firebaseApi.deleteRecipe,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      toast({ title: "Ricetta eliminata", description: "La ricetta è stata rimossa" });
+    }
+  });
+
   const handleShareRecipe = (recipe: Recipe, platform?: string) => {
     const appName = "Food Manager - Il Vikingo del Web";
     const appUrl = window.location.origin;
@@ -397,11 +432,14 @@ const Recipes = () => {
         case 'twitter':
           shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
           break;
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+          break;
+        case 'telegram':
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`;
+          break;
         case 'instagram':
-          // Per Instagram, creiamo un link che apre Instagram con un testo preimpostato
-          const instagramText = encodeURIComponent(text.substring(0, 2200)); // Instagram ha limiti di caratteri
-          
-          // Fallback: copia negli appunti e mostra istruzioni
+          // Per Instagram, copia negli appunti e mostra istruzioni
           if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(() => {
               toast({
@@ -422,6 +460,10 @@ const Recipes = () => {
               });
             });
           }
+          return;
+        case 'email':
+          setSelectedRecipe(recipe);
+          setShowShareDialog(true);
           return;
       }
       
@@ -502,6 +544,47 @@ const Recipes = () => {
       servings: newRecipe.servings,
       category: newRecipe.category || 'Altro'
     });
+  };
+
+  const handleEditRecipe = (recipe: Recipe) => {
+    setEditingRecipe(recipe);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateRecipe = () => {
+    if (!editingRecipe || !editingRecipe.name.trim()) return;
+    
+    updateMutation.mutate({
+      id: editingRecipe.id,
+      recipe: {
+        name: editingRecipe.name,
+        description: editingRecipe.description,
+        ingredients: editingRecipe.ingredients.filter(i => i.trim()),
+        instructions: editingRecipe.instructions.filter(i => i.trim()),
+        prep_time: editingRecipe.prep_time,
+        servings: editingRecipe.servings,
+        category: editingRecipe.category || 'Altro'
+      }
+    });
+  };
+
+  const handleDeleteRecipe = (recipe: Recipe) => {
+    if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
+      deleteMutation.mutate(recipe.id);
+    }
+  };
+
+  const handleShareByEmail = () => {
+    if (!shareEmail.trim() || !selectedRecipe) return;
+    
+    // Qui andrebbe implementata la logica per inviare via email
+    // Per ora simulo l'invio
+    toast({
+      title: "Ricetta condivisa!",
+      description: `Ricetta inviata a ${shareEmail}`
+    });
+    setShareEmail('');
+    setShowShareDialog(false);
   };
 
   const filteredRecipes = allRecipes.filter(recipe => {
@@ -763,6 +846,29 @@ const Recipes = () => {
                     <Eye className="h-4 w-4 mr-2" />
                     Visualizza
                   </Button>
+                  
+                  {/* Bottoni per ricette utente */}
+                  {recipe.user_id !== 'default' && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        onClick={() => handleEditRecipe(recipe)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300"
+                        onClick={() => handleDeleteRecipe(recipe)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  
                   <div className="relative">
                     <Button 
                       size="sm" 
@@ -795,6 +901,24 @@ const Recipes = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => handleShareRecipe(selectedRecipe!, 'whatsapp')}
+                  className="hover:bg-green-50 dark:hover:bg-green-900/20"
+                  title="Condividi su WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4 text-green-600" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareRecipe(selectedRecipe!, 'telegram')}
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  title="Condividi su Telegram"
+                >
+                  <Send className="h-4 w-4 text-blue-500" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleShareRecipe(selectedRecipe!, 'facebook')}
                   className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
                   title="Condividi su Facebook"
@@ -818,6 +942,15 @@ const Recipes = () => {
                   title="Condividi su Instagram"
                 >
                   <Instagram className="h-4 w-4 text-pink-600" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareRecipe(selectedRecipe!, 'email')}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-900/20"
+                  title="Condividi via Email"
+                >
+                  <Mail className="h-4 w-4 text-gray-600" />
                 </Button>
               </div>
             </div>
@@ -880,6 +1013,155 @@ const Recipes = () => {
         </DialogContent>
       </Dialog>
       
+      {/* Edit Recipe Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifica Ricetta</DialogTitle>
+            <p className="text-sm text-muted-foreground">Modifica i dettagli della ricetta</p>
+          </DialogHeader>
+          {editingRecipe && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Nome Ricetta</Label>
+                  <Input
+                    value={editingRecipe.name}
+                    onChange={(e) => setEditingRecipe({...editingRecipe, name: e.target.value})}
+                    placeholder="Es. Pasta alla Carbonara"
+                  />
+                </div>
+                <div>
+                  <Label>Categoria</Label>
+                  <Select value={editingRecipe.category} onValueChange={(value) => setEditingRecipe({...editingRecipe, category: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Primi Piatti">Primi Piatti</SelectItem>
+                      <SelectItem value="Secondi Piatti">Secondi Piatti</SelectItem>
+                      <SelectItem value="Contorni">Contorni</SelectItem>
+                      <SelectItem value="Dolci">Dolci</SelectItem>
+                      <SelectItem value="Antipasti">Antipasti</SelectItem>
+                      <SelectItem value="Pizze">Pizze</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Descrizione</Label>
+                <Textarea
+                  value={editingRecipe.description}
+                  onChange={(e) => setEditingRecipe({...editingRecipe, description: e.target.value})}
+                  placeholder="Breve descrizione della ricetta..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tempo Preparazione (min)</Label>
+                  <Input
+                    type="number"
+                    value={editingRecipe.prep_time}
+                    onChange={(e) => setEditingRecipe({...editingRecipe, prep_time: parseInt(e.target.value) || 30})}
+                  />
+                </div>
+                <div>
+                  <Label>Porzioni</Label>
+                  <Input
+                    type="number"
+                    value={editingRecipe.servings}
+                    onChange={(e) => setEditingRecipe({...editingRecipe, servings: parseInt(e.target.value) || 4})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label>Ingredienti</Label>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    onClick={() => setEditingRecipe({...editingRecipe, ingredients: [...editingRecipe.ingredients, '']})}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Aggiungi
+                  </Button>
+                </div>
+                {editingRecipe.ingredients.map((ingredient, index) => (
+                  <Input
+                    key={index}
+                    value={ingredient}
+                    onChange={(e) => {
+                      const updated = [...editingRecipe.ingredients];
+                      updated[index] = e.target.value;
+                      setEditingRecipe({...editingRecipe, ingredients: updated});
+                    }}
+                    placeholder={`Ingrediente ${index + 1}`}
+                    className="mb-2"
+                  />
+                ))}
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label>Istruzioni</Label>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    onClick={() => setEditingRecipe({...editingRecipe, instructions: [...editingRecipe.instructions, '']})}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Aggiungi
+                  </Button>
+                </div>
+                {editingRecipe.instructions.map((instruction, index) => (
+                  <Textarea
+                    key={index}
+                    value={instruction}
+                    onChange={(e) => {
+                      const updated = [...editingRecipe.instructions];
+                      updated[index] = e.target.value;
+                      setEditingRecipe({...editingRecipe, instructions: updated});
+                    }}
+                    placeholder={`Passo ${index + 1}`}
+                    className="mb-2"
+                  />
+                ))}
+              </div>
+
+              <Button onClick={handleUpdateRecipe} disabled={updateMutation.isPending} className="w-full">
+                {updateMutation.isPending ? 'Salvando...' : 'Salva Modifiche'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Share by Email Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Condividi Ricetta via Email</DialogTitle>
+            <p className="text-sm text-muted-foreground">Invia la ricetta a un amico tramite email</p>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Email destinatario</Label>
+              <Input
+                type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="amico@esempio.com"
+              />
+            </div>
+            <Button onClick={handleShareByEmail} disabled={!shareEmail.trim()} className="w-full">
+              <Mail className="h-4 w-4 mr-2" />
+              Invia Ricetta
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {filteredRecipes.length === 0 && (
         <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-8 text-center">

@@ -324,6 +324,12 @@ export const firebaseApi = {
     });
   },
 
+  updateRecipe: async (id: string, data: Partial<Recipe>) => {
+    if (!db) throw new Error('Database non disponibile');
+    const docRef = doc(db, 'recipes', id);
+    return await updateDoc(docRef, data);
+  },
+
   deleteRecipe: async (id: string) => {
     if (!db) throw new Error('Database non disponibile');
     const docRef = doc(db, 'recipes', id);
