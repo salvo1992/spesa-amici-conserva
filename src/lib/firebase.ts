@@ -824,6 +824,19 @@ export const firebaseApi = {
       throw error;
     }
   },
+
+  // List sharing functions
+  getPendingListRequests: async () => {
+    return getPendingListRequests();
+  },
+
+  shareListWithUser: async (listData: any, userEmail: string) => {
+    return shareListWithUser(listData, userEmail);
+  },
+
+  respondToListRequest: async (requestId: string, accept: boolean) => {
+    return respondToListRequest(requestId, accept);
+  },
 };
 
 // Funzioni aggiuntive per ricerca utenti e condivisione ricette
@@ -960,4 +973,79 @@ export const getPendingSharedRecipes = async () => {
     id: doc.id,
     ...doc.data()
   }));
+};
+
+// Lista Share Requests
+export const getPendingListRequests = async () => {
+  if (!db || !auth?.currentUser) {
+    return [];
+  }
+  
+  const q = query(
+    collection(db, 'list_requests'),
+    where('receiver_email', '==', auth.currentUser.email),
+    where('status', '==', 'pending')
+  );
+  
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+};
+
+export const shareListWithUser = async (listData: any, userEmail: string) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  // Crea una richiesta di condivisione
+  const request = {
+    list_id: listData.id,
+    list_name: listData.name,
+    list_type: listData.type,
+    sender_email: auth.currentUser.email,
+    receiver_email: userEmail,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    list_data: listData // Salva i dati della lista per crearla quando accettata
+  };
+
+  await addDoc(collection(db, 'list_requests'), request);
+};
+
+export const respondToListRequest = async (requestId: string, accept: boolean) => {
+  if (!db || !auth?.currentUser) {
+    throw new Error('Non autenticato');
+  }
+
+  const requestDoc = doc(db, 'list_requests', requestId);
+  const requestSnapshot = await getDoc(requestDoc);
+  
+  if (!requestSnapshot.exists()) {
+    throw new Error('Richiesta non trovata');
+  }
+
+  const requestData = requestSnapshot.data();
+
+  if (accept) {
+    // Crea la lista condivisa nell'account dell'utente che accetta
+    const newList = {
+      ...requestData.list_data,
+      owner_id: auth.currentUser.uid,
+      created_at: new Date().toISOString(),
+      shared_from: requestData.sender_email,
+      last_modified_by: auth.currentUser.email,
+      last_modified_at: new Date().toISOString()
+    };
+    
+    delete newList.id; // Rimuove l'ID originale per crearne uno nuovo
+    await addDoc(collection(db, 'shared_lists'), newList);
+  }
+
+  // Aggiorna lo status della richiesta
+  await updateDoc(requestDoc, {
+    status: accept ? 'accepted' : 'rejected',
+    responded_at: new Date().toISOString()
+  });
 };

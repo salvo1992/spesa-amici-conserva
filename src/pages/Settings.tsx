@@ -114,20 +114,20 @@ const Settings = () => {
   const today = new Date().toLocaleDateString('it-IT');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+        <div className="mb-6 md:mb-8 text-center px-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             {t('settings')}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm md:text-base">
             Personalizza la tua esperienza Food Manager
           </p>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4 md:gap-6">
           {/* Account e Autenticazione */}
-          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-indigo-500">
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-0 shadow-lg border-l-4 border-indigo-500 mx-2 md:mx-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-foreground">
                 <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -376,7 +376,7 @@ const Settings = () => {
               </div>
               <p className="text-orange-100 mb-4">
                 Food Manager è sviluppato da Il Vikingo del Web, 
-                specialista in soluzioni digitali innovative per la gestione domestica.
+                full stack developer specialista in soluzioni digitali innovative e moderne.
               </p>
               <p className="text-xs text-orange-200">
                 © 2024 Il Vikingo del Web. Tutti i diritti riservati.

@@ -6,17 +6,19 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Share2, Plus, Users, ShoppingCart, Package, Calendar, Trash2, UserPlus, AlertTriangle, CheckCircle, ExternalLink, Copy, Mail } from 'lucide-react';
+import { Share2, Plus, Users, ShoppingCart, Package, Calendar, Trash2, UserPlus, AlertTriangle, CheckCircle, ExternalLink, Copy, Mail, Bell } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { firebaseAuth, firebaseApi, type SharedList } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ListRequestsModal from '@/components/ListRequestsModal';
 
 const Shared = () => {
   const { isAuthenticated } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [selectedList, setSelectedList] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -65,6 +67,12 @@ const Shared = () => {
   const { data: userSharedLists = [], isLoading } = useQuery({
     queryKey: ['shared-lists'],
     queryFn: firebaseApi.getSharedLists,
+    enabled: isAuthenticated
+  });
+
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ['list-requests', 'pending'],
+    queryFn: firebaseApi.getPendingListRequests,
     enabled: isAuthenticated
   });
 
@@ -176,7 +184,8 @@ const Shared = () => {
             </div>
           </div>
           
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <div className="flex gap-3">
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
               <Button 
                 size="lg"
@@ -264,6 +273,27 @@ const Shared = () => {
               </div>
             </DialogContent>
           </Dialog>
+          
+          {isAuthenticated && (
+            <Button 
+              onClick={() => setShowRequestsModal(true)}
+              variant="outline"
+              size="lg"
+              className="relative border-2 border-orange-300 text-orange-700 hover:bg-orange-50 font-semibold px-4 sm:px-6 py-3 sm:py-4 rounded-xl transition-all duration-300 hover:scale-105"
+            >
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="text-sm sm:text-base">Richieste</span>
+              {pendingRequests.length > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
+                >
+                  {pendingRequests.length}
+                </Badge>
+              )}
+            </Button>
+          )}
+          </div>
         </div>
       </div>
 
@@ -456,6 +486,12 @@ const Shared = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* List Requests Modal */}
+      <ListRequestsModal 
+        isOpen={showRequestsModal} 
+        onClose={() => setShowRequestsModal(false)} 
+      />
     </div>
   );
 };
