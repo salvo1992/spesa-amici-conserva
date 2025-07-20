@@ -249,6 +249,35 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Richieste Ricette */}
+        {stats?.pendingRecipeRequests > 0 && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl animate-fade-in relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-rose-500/5"></div>
+            <CardHeader className="relative z-10">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl">
+                  <ChefHat className="h-6 w-6 text-white" />
+                </div>
+                Richieste Ricette
+                <Badge variant="destructive" className="ml-auto">
+                  {stats.pendingRecipeRequests}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 relative z-10">
+              <p className="text-sm text-muted-foreground">
+                Hai {stats.pendingRecipeRequests} richiesta{stats.pendingRecipeRequests > 1 ? 'e' : ''} di ricette in attesa di risposta
+              </p>
+              <Button 
+                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white" 
+                onClick={() => window.location.href = '/recipes'}
+              >
+                Visualizza Richieste
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Recent Activity */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl animate-fade-in relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-teal-500/5"></div>

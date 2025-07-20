@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { ChefHat, Plus, Clock, Users, Search, Heart, Filter, BookOpen, Eye, Facebook, Instagram, Edit2, Trash2, MessageCircle, Mail, Send, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firebaseAuth, firebaseApi, type Recipe } from '@/lib/firebase';
+import { firebaseAuth, firebaseApi, type Recipe, getPendingSharedRecipes } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RecipeDetailsModal from '@/components/RecipeDetailsModal';
+import RecipeRequestsModal from '@/components/RecipeRequestsModal';
 
 const Recipes = () => {
   console.log('Recipes component is rendering...');
@@ -24,6 +25,7 @@ const Recipes = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showRequestsDialog, setShowRequestsDialog] = useState(false);
   
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -42,11 +44,16 @@ const Recipes = () => {
     category: ''
   });
 
-  // Carica i preferiti dal localStorage al mount
+  // Carica i preferiti e ricette nascoste dal localStorage al mount
   useEffect(() => {
     const savedFavorites = localStorage.getItem('recipe-favorites');
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
+    }
+    
+    const savedHiddenRecipes = localStorage.getItem('hidden-default-recipes');
+    if (savedHiddenRecipes) {
+      setHiddenDefaultRecipes(JSON.parse(savedHiddenRecipes));
     }
   }, []);
 
@@ -54,6 +61,11 @@ const Recipes = () => {
   useEffect(() => {
     localStorage.setItem('recipe-favorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Salva le ricette nascoste nel localStorage quando cambiano
+  useEffect(() => {
+    localStorage.setItem('hidden-default-recipes', JSON.stringify(hiddenDefaultRecipes));
+  }, [hiddenDefaultRecipes]);
 
   // Gestisce le ricette condivise tramite URL
   useEffect(() => {
@@ -414,6 +426,13 @@ const Recipes = () => {
     enabled: isAuthenticated
   });
 
+  // Query per le richieste ricette in attesa
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ['pending-recipe-requests'],
+    queryFn: getPendingSharedRecipes,
+    enabled: isAuthenticated
+  });
+
   const allRecipes = [...defaultRecipes, ...userRecipes];
 
   const createMutation = useMutation({
@@ -614,7 +633,7 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
     if (!editingRecipe || !editingRecipe.name.trim()) return;
     
     if (editingRecipe.user_id === 'default') {
-      // Se è una ricetta di default, creiamo una nuova ricetta personalizzata
+      // Se è una ricetta di default, creiamo una nuova ricetta personalizzata e nascondiamo l'originale
       createMutation.mutate({
         name: editingRecipe.name,
         description: editingRecipe.description,
@@ -624,6 +643,10 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
         servings: editingRecipe.servings,
         category: editingRecipe.category || 'Altro'
       });
+      
+      // Nascondi la ricetta di default originale
+      setHiddenDefaultRecipes(prev => [...prev, editingRecipe.id]);
+      setShowEditDialog(false);
     } else {
       // Se è una ricetta dell'utente, aggiorniamola normalmente
       updateMutation.mutate({
@@ -642,7 +665,8 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
   };
 
   const handleDeleteDefaultRecipe = (recipeId: string) => {
-    // Nascondi la ricetta di default (simulazione)
+    // Nascondi la ricetta di default
+    setHiddenDefaultRecipes(prev => [...prev, recipeId]);
     toast({
       title: "Ricetta eliminata!",
       description: "La ricetta non sarà più visibile nella tua lista",
@@ -709,6 +733,18 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
           </div>
         </div>
         <div className="flex justify-end items-center gap-2 mt-4">
+          {pendingRequests.length > 0 && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => setShowRequestsDialog(true)}
+              className="text-xs border-pink-300 text-pink-700 hover:bg-pink-50 relative"
+            >
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
+              Richieste ({pendingRequests.length})
+            </Button>
+          )}
+          
           {hiddenDefaultRecipes.length > 0 && (
             <Button 
               size="sm" 
@@ -1118,7 +1154,11 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
         </DialogContent>
       </Dialog>
 
-
+      {/* Recipe Requests Modal */}
+      <RecipeRequestsModal
+        isOpen={showRequestsDialog}
+        onClose={() => setShowRequestsDialog(false)}
+      />
 
       {filteredRecipes.length === 0 && (
         <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">

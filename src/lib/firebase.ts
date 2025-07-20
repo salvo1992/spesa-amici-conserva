@@ -527,14 +527,16 @@ export const firebaseApi = {
       activeCost: 0,
       totalSpent: 0,
       averageSpent: 0,
-      completedItems: 0
+      completedItems: 0,
+      pendingRecipeRequests: 0
     };
 
-    const [shoppingItems, pantryItems, recipes, sharedLists] = await Promise.all([
+    const [shoppingItems, pantryItems, recipes, sharedLists, pendingRecipes] = await Promise.all([
       firebaseApi.getShoppingItems(),
       firebaseApi.getPantryItems(),
       firebaseApi.getRecipes(),
-      firebaseApi.getSharedLists()
+      firebaseApi.getSharedLists(),
+      getPendingSharedRecipes()
     ]);
 
     const today = new Date();
@@ -575,7 +577,8 @@ export const firebaseApi = {
       activeCost,
       totalSpent,
       averageSpent,
-      completedItems: completedItems.length
+      completedItems: completedItems.length,
+      pendingRecipeRequests: pendingRecipes.length
     };
   },
 
@@ -754,13 +757,17 @@ export const shareRecipeWithUser = async (recipeId: string, targetUserEmail: str
   const shareData = {
     recipeId,
     fromUserId: auth.currentUser.uid,
+    fromUserEmail: auth.currentUser.email,
     toUserEmail: targetUserEmail,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
   
   if (db) {
-    await addDoc(collection(db, 'sharedRecipes'), shareData);
+    await addDoc(collection(db, 'recipe_requests'), shareData);
+  } else {
+    // Simulazione per Firebase non configurato
+    console.log('Ricetta condivisa:', shareData);
   }
 };
 
@@ -769,19 +776,34 @@ export const respondToSharedRecipe = async (shareId: string, accept: boolean) =>
   if (!auth.currentUser) throw new Error('User not authenticated');
   
   if (db) {
-    const shareRef = doc(db, 'sharedRecipes', shareId);
+    const shareRef = doc(db, 'recipe_requests', shareId);
     await updateDoc(shareRef, {
       status: accept ? 'accepted' : 'rejected',
       respondedAt: new Date().toISOString()
     });
     
     if (accept) {
-      // Se accettata, aggiungi la ricetta alle ricette dell'utente
+      // Se accettata, ottieni i dati della richiesta per copiare la ricetta
       const shareDoc = await getDoc(shareRef);
       if (shareDoc.exists()) {
         const shareData = shareDoc.data();
-        // Qui dovresti copiare la ricetta nelle ricette dell'utente destinatario
-        // Implementa la logica specifica in base a come gestisci le ricette
+        // Ottieni la ricetta originale
+        const recipeRef = doc(db, 'recipes', shareData.recipeId);
+        const recipeDoc = await getDoc(recipeRef);
+        
+        if (recipeDoc.exists()) {
+          const recipeData = recipeDoc.data();
+          // Crea una copia della ricetta per l'utente destinatario
+          await firebaseApi.createRecipe({
+            name: recipeData.name,
+            description: recipeData.description,
+            ingredients: recipeData.ingredients,
+            instructions: recipeData.instructions,
+            prep_time: recipeData.prep_time,
+            servings: recipeData.servings,
+            category: recipeData.category
+          });
+        }
       }
     }
   }
@@ -789,13 +811,26 @@ export const respondToSharedRecipe = async (shareId: string, accept: boolean) =>
 
 // Funzione per ottenere le ricette condivise in attesa
 export const getPendingSharedRecipes = async () => {
-  if (!auth.currentUser) throw new Error('User not authenticated');
+  if (!auth.currentUser) return [];
   
-  if (!db) return [];
+  if (!db) {
+    // Simulazione per Firebase non configurato
+    return [
+      {
+        id: 'req1',
+        recipeId: 'default-1',
+        fromUserEmail: 'marco.rossi@email.com',
+        toUserEmail: auth.currentUser.email,
+        recipeName: 'Carbonara Autentica',
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
   
   const q = query(
-    collection(db, 'sharedRecipes'),
-    where('toUserId', '==', auth.currentUser.uid),
+    collection(db, 'recipe_requests'),
+    where('toUserEmail', '==', auth.currentUser.email),
     where('status', '==', 'pending')
   );
   
