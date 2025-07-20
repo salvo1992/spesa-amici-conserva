@@ -44,8 +44,8 @@ const SharedListDetail = () => {
   useEffect(() => {
     if (listId) {
       loadSharedList();
-      // Ridotto intervallo di aggiornamento per migliori performance
-      const interval = setInterval(loadSharedList, 10000);
+      // Ridotto a 30 secondi per evitare reload eccessivi
+      const interval = setInterval(loadSharedList, 30000);
       return () => clearInterval(interval);
     }
   }, [listId]);
