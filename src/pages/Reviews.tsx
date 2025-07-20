@@ -284,46 +284,54 @@ const Reviews = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-            Recensioni e Valutazioni
-          </h1>
-          <div className="text-muted-foreground max-w-2xl mx-auto">
+        <div className="mb-6 md:mb-8 text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="animate-pulse">
+              <Star className="h-8 w-8 md:h-10 md:w-10 text-yellow-400 fill-current animate-spin" style={{animationDuration: '3s'}} />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent animate-fade-in">
+              Recensioni e Valutazioni
+            </h1>
+            <div className="animate-bounce">
+              <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+            </div>
+          </div>
+          <div className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base px-4 animate-fade-in" style={{animationDelay: '0.3s'}}>
             Condividi la tua esperienza con le ricette e l'app. Scambia recensioni sulle ricette, 
             discuti di cucina, condividi idee per feste con amici. Food Manager è grata ai suoi utenti 
             per averla scelta e ti invita a lasciare una recensione se l'app ti piace!
           </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4 md:gap-6">
           {allReviews.map((review) => {
             const commentsQuery = useComments(review.id);
             const comments = commentsQuery.data || [];
             
             return (
-              <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-green-500">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
+              <Card key={review.id} className="card-hover shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-green-500 animate-scale-in">
+                <CardHeader className="pb-3 px-4 md:px-6">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </div>
-                      <div>
-                        <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                          {review.product_name}
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base md:text-lg text-foreground flex flex-wrap items-center gap-2">
+                          <span className="truncate">{review.product_name}</span>
                           {review.app_review && (
-                            <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                            <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs">
                               App
                             </Badge>
                           )}
                         </CardTitle>
-                        <div className="flex items-center space-x-2 mt-1">
+                        <div className="flex flex-wrap items-center space-x-2 mt-1">
                           <div className="flex space-x-1">
                             {renderStars(review.rating)}
                           </div>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs md:text-sm text-muted-foreground">
                             di {
                               review.user_name || 
                               (review.user_id === 'default' ? 'Utente' : 
@@ -335,33 +343,33 @@ const Reviews = () => {
                         </div>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {new Date(review.created_at).toLocaleDateString()}
                     </Badge>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-0">
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 mb-4 border border-green-100 dark:border-green-800">
+                <CardContent className="pt-0 px-4 md:px-6">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-3 md:p-4 mb-4 border border-green-100 dark:border-green-800">
                     <MessageSquare className="h-4 w-4 text-green-600 mb-2" />
-                    <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <div className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm md:text-base">
                       {review.comment}
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
                       <button 
                         onClick={() => handleHelpful(review.id)}
-                        className={`flex items-center space-x-2 transition-colors ${
+                        className={`flex items-center space-x-1 md:space-x-2 transition-colors text-xs md:text-sm ${
                           userVotes[review.id] 
                             ? 'text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg' 
                             : 'text-gray-500 hover:text-green-600'
                         }`}
                         disabled={toggleVoteMutation.isPending}
                       >
-                        <ThumbsUp className={`h-4 w-4 ${userVotes[review.id] ? 'fill-current' : ''}`} />
-                        <span className="text-sm">
+                        <ThumbsUp className={`h-3 w-3 md:h-4 md:w-4 ${userVotes[review.id] ? 'fill-current' : ''}`} />
+                        <span>
                           {review.helpful_count} utile
                         </span>
                       </button>
@@ -370,10 +378,12 @@ const Reviews = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => comments.length > 3 ? toggleAllComments(review.id) : toggleComments(review.id)}
-                        className="flex items-center gap-2 text-gray-500 hover:text-green-600"
+                        className="flex items-center gap-1 md:gap-2 text-gray-500 hover:text-green-600 text-xs md:text-sm h-8 px-2 md:px-3"
                       >
-                        <MessageSquare className="h-4 w-4" />
-                        <span className="text-sm">Commenta ({comments.length})</span>
+                        <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
+                        <span className="hidden sm:inline">Commenta</span>
+                        <span className="sm:hidden">({comments.length})</span>
+                        <span className="hidden sm:inline">({comments.length})</span>
                       </Button>
 
                       {/* Bottone Elimina Post - visibile solo al proprietario */}
@@ -382,11 +392,12 @@ const Reviews = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteReview(review.id)}
-                          className="flex items-center gap-2 text-red-500 hover:text-red-600"
+                          className="flex items-center gap-1 md:gap-2 text-red-500 hover:text-red-600 text-xs md:text-sm h-8 px-2 md:px-3"
                           disabled={deleteReviewMutation.isPending}
                         >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="text-sm">Elimina Post</span>
+                          <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                          <span className="hidden sm:inline">Elimina Post</span>
+                          <span className="sm:hidden">Del</span>
                         </Button>
                       )}
                     </div>
@@ -403,17 +414,17 @@ const Reviews = () => {
                         {/* Mostra solo i primi 3 commenti */}
                         {comments.slice(0, 3).map((comment) => (
                           <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <span className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                                     {comment.user_name}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 flex-shrink-0">
                                     {new Date(comment.created_at).toLocaleDateString()}
                                   </span>
                                 </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 break-words">
                                   {comment.comment}
                                 </p>
                               </div>
@@ -422,7 +433,7 @@ const Reviews = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteComment(comment.id)}
-                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-600 flex-shrink-0"
                                   disabled={deleteCommentMutation.isPending}
                                 >
                                   <Trash2 className="h-3 w-3" />
@@ -438,7 +449,7 @@ const Reviews = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleAllComments(review.id)}
-                            className="w-full text-green-600 hover:text-green-700"
+                            className="w-full text-green-600 hover:text-green-700 text-xs md:text-sm"
                           >
                             Vedi tutti i {comments.length} commenti
                           </Button>
@@ -453,7 +464,7 @@ const Reviews = () => {
                               ...prev,
                               [review.id]: e.target.value
                             }))}
-                            className="flex-1"
+                            className="flex-1 text-sm"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
                                 handleAddComment(review.id);
@@ -464,7 +475,7 @@ const Reviews = () => {
                             size="sm"
                             onClick={() => handleAddComment(review.id)}
                             disabled={!newComment[review.id]?.trim() || createCommentMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 text-xs md:text-sm px-3 md:px-4"
                           >
                             {createCommentMutation.isPending ? 'Invio...' : 'Invia'}
                           </Button>
@@ -475,9 +486,11 @@ const Reviews = () => {
 
                   {/* Modale per visualizzare tutti i commenti */}
                   <Dialog open={showAllComments[review.id]} onOpenChange={() => toggleAllComments(review.id)}>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                    <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col mx-4">
                       <DialogHeader>
-                        <DialogTitle>Tutti i commenti per "{review.product_name}"</DialogTitle>
+                        <DialogTitle className="text-base md:text-lg truncate">
+                          Tutti i commenti per "{review.product_name}"
+                        </DialogTitle>
                       </DialogHeader>
                       
                       <div className="flex-1 overflow-y-auto space-y-3 pr-2">
@@ -550,14 +563,14 @@ const Reviews = () => {
 
         <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
           <DialogTrigger asChild>
-            <Card className="mt-8 card-hover shadow-lg border-0 bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer">
-              <CardContent className="p-6 text-center">
-                <Edit3 className="h-8 w-8 mx-auto mb-3" />
-                <h3 className="text-xl font-semibold mb-2">Vuoi condividere la tua recensione?</h3>
-                <div className="text-green-100 mb-4">
+            <Card className="mt-6 md:mt-8 card-hover shadow-lg border-0 bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer animate-fade-in">
+              <CardContent className="p-4 md:p-6 text-center">
+                <Edit3 className="h-6 w-6 md:h-8 md:w-8 mx-auto mb-3" />
+                <h3 className="text-lg md:text-xl font-semibold mb-2">Vuoi condividere la tua recensione?</h3>
+                <div className="text-green-100 mb-4 text-sm md:text-base">
                   Aiuta altri utenti condividendo la tua esperienza
                 </div>
-                <div className="inline-flex items-center gap-2 bg-white text-green-600 px-6 py-2 rounded-lg font-medium hover:bg-green-50 transition-colors">
+                <div className="inline-flex items-center gap-2 bg-white text-green-600 px-4 md:px-6 py-2 rounded-lg font-medium hover:bg-green-50 transition-colors text-sm md:text-base">
                   <Edit3 className="h-4 w-4" />
                   Scrivi una Recensione
                 </div>
@@ -565,7 +578,7 @@ const Reviews = () => {
             </Card>
           </DialogTrigger>
           
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] md:max-w-md mx-4">
             <DialogHeader>
               <DialogTitle>Scrivi una Recensione</DialogTitle>
             </DialogHeader>
