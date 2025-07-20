@@ -219,7 +219,7 @@ const Reviews = () => {
                           {renderStars(review.rating)}
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          di Utente
+                          di {review.user_id === 'default' ? 'Utente' : (review.user_id === user?.uid ? user?.name : 'Utente')}
                         </span>
                       </div>
                     </div>
