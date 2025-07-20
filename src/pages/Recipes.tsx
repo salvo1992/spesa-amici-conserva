@@ -24,14 +24,13 @@ const Recipes = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showShareUsersDialog, setShowShareUsersDialog] = useState(false);
+  
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [registeredUsers, setRegisteredUsers] = useState<{id: string, name: string, surname: string}[]>([]);
-  const [selectedUser, setSelectedUser] = useState('');
+  const [hiddenDefaultRecipes, setHiddenDefaultRecipes] = useState<string[]>([]);
 
   const [newRecipe, setNewRecipe] = useState({
     name: '',
@@ -448,20 +447,18 @@ const Recipes = () => {
     }
   });
 
-  // Carica gli utenti registrati
+  // Carica le ricette nascoste dal localStorage
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const users = await firebaseApi.getRegisteredUsers();
-        setRegisteredUsers(users);
-      } catch (error) {
-        console.error('Errore nel caricamento utenti:', error);
-      }
-    };
-    if (isAuthenticated) {
-      loadUsers();
+    const savedHidden = localStorage.getItem('hidden-default-recipes');
+    if (savedHidden) {
+      setHiddenDefaultRecipes(JSON.parse(savedHidden));
     }
-  }, [isAuthenticated]);
+  }, []);
+
+  // Salva le ricette nascoste nel localStorage quando cambiano
+  useEffect(() => {
+    localStorage.setItem('hidden-default-recipes', JSON.stringify(hiddenDefaultRecipes));
+  }, [hiddenDefaultRecipes]);
 
   const handleShareRecipe = (recipe: Recipe, platform?: string) => {
     const appName = "Food Manager";
@@ -496,8 +493,7 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
           shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}&quote=${encodeURIComponent(socialText)}`;
           break;
         case 'users':
-          setSelectedRecipe(recipe);
-          setShowShareUsersDialog(true);
+          // Questa funzionalità è ora gestita nel RecipeDetailsModal
           return;
         case 'whatsapp':
           const whatsappText = `Food Manager - ${recipe.name}, ${recipe.prep_time} min ⏱️\n\n🍽️ *${recipe.name}*\n\n${recipe.description}\n\n👥 Porzioni: ${recipe.servings}\n\n📱 Scarica Food Manager per vedere la ricetta completa e organizzare la tua cucina!\n\n🔗 ${appUrl}\n📲 Play Store: https://play.google.com/store/apps/details?id=com.foodmanager`;
@@ -667,27 +663,12 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
     }
   };
 
-  const handleShareWithUser = async () => {
-    if (!selectedUser.trim() || !selectedRecipe) return;
-    
-    const user = registeredUsers.find(u => u.id === selectedUser);
-    if (!user) return;
-    
-    try {
-      await firebaseApi.shareRecipeWithUser(selectedRecipe, user.id, `${user.name} ${user.surname}`);
-      toast({
-        title: "🎉 Ricetta condivisa!",
-        description: `Ricetta inviata a ${user.name} ${user.surname}. Riceverà una notifica per accettarla.`
-      });
-      setSelectedUser('');
-      setShowShareUsersDialog(false);
-    } catch (error) {
-      toast({
-        title: "❌ Errore",
-        description: "Impossibile condividere la ricetta. Riprova.",
-        variant: "destructive"
-      });
-    }
+  const handleRestoreDefaultRecipes = () => {
+    setHiddenDefaultRecipes([]);
+    toast({
+      title: "Ricette ripristinate",
+      description: "Tutte le ricette di default sono state ripristinate"
+    });
   };
 
 
@@ -695,7 +676,8 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || recipe.category === filterCategory;
-    return matchesSearch && matchesCategory;
+    const isNotHidden = !(recipe.user_id === 'default' && hiddenDefaultRecipes.includes(recipe.id));
+    return matchesSearch && matchesCategory && isNotHidden;
   });
 
   if (isLoading) {
@@ -726,7 +708,17 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
             </div>
           </div>
         </div>
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end items-center gap-2 mt-4">
+          {hiddenDefaultRecipes.length > 0 && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleRestoreDefaultRecipes}
+              className="text-xs"
+            >
+              Ripristina Ricette Default
+            </Button>
+          )}
           
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
@@ -1127,36 +1119,6 @@ ${recipe.ingredients.length > 3 ? '... e altro ancora!' : ''}
       </Dialog>
 
 
-      {/* Share with Users Dialog */}
-      <Dialog open={showShareUsersDialog} onOpenChange={setShowShareUsersDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Condividi con Utenti Registrati</DialogTitle>
-            <p className="text-sm text-muted-foreground">Invia la ricetta direttamente a un utente dell'app</p>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Seleziona utente</Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Scegli un utente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {registeredUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} {user.surname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleShareWithUser} disabled={!selectedUser.trim()} className="w-full">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Condividi Ricetta
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {filteredRecipes.length === 0 && (
         <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg">

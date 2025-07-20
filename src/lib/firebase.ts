@@ -712,20 +712,19 @@ export const firebaseApi = {
 };
 
 // Funzioni aggiuntive per ricerca utenti e condivisione ricette
-export const searchUsers = async (searchQuery: string) => {
+export const searchUsers = async (email: string) => {
   if (!db) {
-    // Simulazione ricerca utenti quando Firebase non è configurato
+    // Simulazione ricerca utenti quando Firebase non è configurato - ora per email
     const allUsers = [
-      { id: 'user1', firstName: 'Marco', lastName: 'Rossi' },
-      { id: 'user2', firstName: 'Giulia', lastName: 'Bianchi' },
-      { id: 'user3', firstName: 'Alessandro', lastName: 'Verdi' },
-      { id: 'user4', firstName: 'Francesca', lastName: 'Neri' },
-      { id: 'user5', firstName: 'Luca', lastName: 'Ferrari' }
+      { id: 'user1', firstName: 'Marco', lastName: 'Rossi', email: 'marco.rossi@email.com' },
+      { id: 'user2', firstName: 'Giulia', lastName: 'Bianchi', email: 'giulia.bianchi@email.com' },
+      { id: 'user3', firstName: 'Alessandro', lastName: 'Verdi', email: 'alessandro.verdi@email.com' },
+      { id: 'user4', firstName: 'Francesca', lastName: 'Neri', email: 'francesca.neri@email.com' },
+      { id: 'user5', firstName: 'Luca', lastName: 'Ferrari', email: 'luca.ferrari@email.com' }
     ];
     
-    return allUsers.filter(user => 
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+    return allUsers.filter(user =>
+      user.email.toLowerCase() === email.toLowerCase()
     );
   }
   
@@ -736,12 +735,12 @@ export const searchUsers = async (searchQuery: string) => {
     const users = snapshot.docs.map(doc => ({ 
       id: doc.id, 
       firstName: doc.data().firstName || doc.data().name?.split(' ')[0] || 'Utente',
-      lastName: doc.data().lastName || doc.data().name?.split(' ')[1] || ''
+      lastName: doc.data().lastName || doc.data().name?.split(' ')[1] || '',
+      email: doc.data().email || ''
     }));
     
     return users.filter(user => 
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+      user.email && user.email.toLowerCase() === email.toLowerCase()
     );
   } catch (error) {
     console.error('Errore nella ricerca utenti:', error);
@@ -749,13 +748,13 @@ export const searchUsers = async (searchQuery: string) => {
   }
 };
 
-export const shareRecipeWithUser = async (recipeId: string, targetUserId: string) => {
+export const shareRecipeWithUser = async (recipeId: string, targetUserEmail: string) => {
   if (!auth.currentUser) throw new Error('User not authenticated');
   
   const shareData = {
     recipeId,
     fromUserId: auth.currentUser.uid,
-    toUserId: targetUserId,
+    toUserEmail: targetUserEmail,
     status: 'pending',
     createdAt: new Date().toISOString()
   };

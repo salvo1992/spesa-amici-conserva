@@ -35,6 +35,7 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showSentModal, setShowSentModal] = useState(false);
   if (!recipe) return null;
 
   const handleAddToShoppingList = async () => {
@@ -173,13 +174,13 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
     }
   };
 
-  const handleShareWithUser = async (targetUserId: string, targetUserName: string) => {
+  const handleShareWithUser = async (targetUserEmail: string) => {
     try {
-      await shareRecipeWithUser(recipe.id, targetUserId);
-      toast({
-        title: "Ricetta inviata!",
-        description: `Ricetta inviata a ${targetUserName}. L'utente riceverà una notifica per accettarla.`
-      });
+      await shareRecipeWithUser(recipe.id, targetUserEmail);
+      setShowSentModal(true);
+      setTimeout(() => {
+        setShowSentModal(false);
+      }, 3000);
       setShowUserSearch(false);
       setSearchQuery('');
       setSearchResults([]);
@@ -256,28 +257,33 @@ const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({
               <h3 className="text-lg font-semibold mb-3">Condividi con Utenti Registrati</h3>
               <div className="flex gap-2 mb-4">
                 <Input
-                  placeholder="Cerca utenti per nome o cognome..."
+                  type="email"
+                  placeholder="Inserisci email utente..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleUserSearch()}
                 />
-                <Button onClick={handleUserSearch} disabled={loading}>
-                  <Search className="h-4 w-4" />
-                </Button>
+                {searchQuery.includes('@') && searchQuery.includes('.') && (
+                  <Button onClick={() => handleShareWithUser(searchQuery)}>
+                    <Send className="h-4 w-4 mr-1" />
+                    Invia
+                  </Button>
+                )}
               </div>
-              {searchResults.length > 0 && (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {searchResults.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <span>{user.firstName} {user.lastName}</span>
-                      <Button size="sm" onClick={() => handleShareWithUser(user.id, `${user.firstName} ${user.lastName}`)}>
-                        <Send className="h-4 w-4 mr-1" />
-                        Invia
-                      </Button>
-                    </div>
-                  ))}
+            </div>
+          )}
+
+          {/* Modal Ricetta Inviata */}
+          {showSentModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Send className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Ricetta Inviata!</h3>
+                  <p className="text-gray-600">La ricetta è stata inviata con successo all'utente.</p>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
