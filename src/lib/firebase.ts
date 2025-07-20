@@ -13,24 +13,37 @@ const firebaseConfig = {
 
 // Verifica se Firebase è configurato
 const isFirebaseConfigured = () => {
-  return firebaseConfig.apiKey && 
-         firebaseConfig.authDomain && 
-         firebaseConfig.projectId;
+  const hasConfig = !!(firebaseConfig.apiKey && 
+                      firebaseConfig.authDomain && 
+                      firebaseConfig.projectId);
+  
+  if (!hasConfig) {
+    console.warn('Firebase config missing:', {
+      hasApiKey: !!firebaseConfig.apiKey,
+      hasAuthDomain: !!firebaseConfig.authDomain,
+      hasProjectId: !!firebaseConfig.projectId
+    });
+  }
+  
+  return hasConfig;
 };
 
 let app: any = null;
 let auth: any = null;
 let db: any = null;
 
-// Inizializza Firebase solo se configurato
-if (isFirebaseConfigured()) {
-  try {
+// Inizializza Firebase
+try {
+  if (isFirebaseConfigured()) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-  } catch (error) {
-    console.warn('Errore inizializzazione Firebase:', error);
+    console.log('Firebase inizializzato correttamente');
+  } else {
+    console.warn('Firebase non configurato - usando modalità fallback');
   }
+} catch (error) {
+  console.error('Errore inizializzazione Firebase:', error);
 }
 
 // Types
@@ -153,18 +166,54 @@ export const firebaseAuth = {
   },
 
   login: async (email: string, password: string) => {
-    if (!auth) throw new Error('Firebase non configurato');
-    return await signInWithEmailAndPassword(auth, email, password);
+    if (!auth) {
+      console.error('Firebase auth non configurato');
+      throw new Error('Firebase non configurato');
+    }
+    
+    try {
+      console.log('Tentativo login per:', email);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login successful:', result.user.uid);
+      return result;
+    } catch (error: any) {
+      console.error('Errore login:', error.code, error.message);
+      throw error;
+    }
   },
 
   register: async (email: string, password: string) => {
-    if (!auth) throw new Error('Firebase non configurato');
-    return await createUserWithEmailAndPassword(auth, email, password);
+    if (!auth) {
+      console.error('Firebase auth non configurato');
+      throw new Error('Firebase non configurato');
+    }
+    
+    try {
+      console.log('Tentativo registrazione per:', email);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Registrazione successful:', result.user.uid);
+      return result;
+    } catch (error: any) {
+      console.error('Errore registrazione:', error.code, error.message);
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('Email già in uso');
+      } else if (error.code === 'auth/weak-password') {
+        throw new Error('Password troppo debole');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Email non valida');
+      }
+      throw error;
+    }
   },
 
   logout: async () => {
     if (!auth) return;
-    await signOut(auth);
+    try {
+      await signOut(auth);
+      console.log('Logout successful');
+    } catch (error) {
+      console.error('Errore logout:', error);
+    }
   }
 };
 
