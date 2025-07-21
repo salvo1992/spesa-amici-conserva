@@ -638,6 +638,33 @@ export const firebaseApi = {
     }
   },
 
+  // Notifica Push/POST per richieste
+  sendListInviteNotification: async (recipientEmail: string, listName: string, requesterName: string): Promise<void> => {
+    try {
+      // Simula una notifica push/POST (in produzione useresti un servizio come Firebase Cloud Messaging)
+      const notificationData = {
+        title: `📋 Nuovo invito per lista condivisa`,
+        body: `${requesterName} ti ha invitato a collaborare sulla lista "${listName}"`,
+        data: {
+          type: 'list_invite',
+          listName,
+          requesterName,
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      // POST notification to user's device (mock implementation)
+      console.log('📬 Notifica inviata:', notificationData);
+      
+      // In un'app reale, qui faresti una chiamata API al tuo backend
+      // che invia la notifica push al dispositivo dell'utente
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Errore invio notifica:', error);
+    }
+  },
+
   createSharedList: async (listData: Omit<SharedList, 'id' | 'created_at'>) => {
     if (!db || !auth?.currentUser) {
       throw new Error('Non autenticato');
@@ -648,11 +675,37 @@ export const firebaseApi = {
       owner_id: auth.currentUser.uid,
       created_at: new Date().toISOString(),
       last_modified_by: auth.currentUser.email || auth.currentUser.uid,
+      members: [auth.currentUser.email], // Solo il creatore inizialmente
       last_modified_at: new Date().toISOString(),
       chat_messages: []
     };
 
     const docRef = await addDoc(collection(db, 'shared_lists'), newList);
+    
+    // Invia richieste POST e notifiche a tutti i membri
+    for (const memberEmail of listData.members) {
+      if (memberEmail && memberEmail !== auth.currentUser.email) {
+        // Crea richiesta nel database
+        await addDoc(collection(db, 'list_requests'), {
+          list_id: docRef.id,
+          list_name: listData.name,
+          requester_email: auth.currentUser.email,
+          requester_name: auth.currentUser.displayName || auth.currentUser.email,
+          recipient_email: memberEmail,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          type: listData.type
+        });
+        
+        // Invia notifica POST
+        await firebaseApi.sendListInviteNotification(
+          memberEmail, 
+          listData.name, 
+          auth.currentUser.displayName || auth.currentUser.email || 'Utente'
+        );
+      }
+    }
+
     return { id: docRef.id, ...newList };
   },
 

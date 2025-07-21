@@ -44,9 +44,7 @@ const SharedListDetail = () => {
   useEffect(() => {
     if (listId) {
       loadSharedList();
-      // Ridotto a 30 secondi per evitare reload eccessivi
-      const interval = setInterval(loadSharedList, 30000);
-      return () => clearInterval(interval);
+      // Rimosso reload automatico per evitare errori DOM
     }
   }, [listId]);
 
@@ -241,65 +239,68 @@ const SharedListDetail = () => {
   const completedItems = list.items ? list.items.filter(item => item.completed).length : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-3 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+        {/* Header - Mobile Responsive */}
+        <div className="mb-6 sm:mb-8">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/shared')}
-            className="mb-4 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="mb-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Torna alle liste
           </Button>
           
           <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-blue-500">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-3">
-                    {list.type === 'shopping' ? '🛒' : '📦'} {list.name}
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-xl sm:text-2xl flex items-center gap-2 sm:gap-3">
+                    {list.type === 'shopping' ? '🛒' : '📦'} 
+                    <span className="truncate">{list.name}</span>
                   </CardTitle>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                       {list.members?.length || 0} membri
                     </div>
                     <div className="flex items-center gap-1">
-                      <Package className="h-4 w-4" />
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4" />
                       {completedItems}/{list.items?.length || 0} completati
                     </div>
                     <div className="flex items-center gap-1">
-                      <Euro className="h-4 w-4" />
+                      <Euro className="h-3 w-3 sm:h-4 sm:w-4" />
                       €{list.total_cost?.toFixed(2) || '0.00'}
                     </div>
                   </div>
                   {list.last_modified_by && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      Ultimo aggiornamento: {list.last_modified_by} - {new Date(list.last_modified_at || '').toLocaleString()}
+                      <span className="truncate">Ultimo: {list.last_modified_by}</span>
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2">
+                
+                {/* Mobile Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                   <Dialog open={showChatDialog} onOpenChange={setShowChatDialog}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <MessageCircle className="h-4 w-4 mr-2" />
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
+                        <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Chat ({list.chat_messages?.length || 0})
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md">
+                    <DialogContent className="w-[95vw] max-w-md mx-auto">
                       <DialogHeader>
-                        <DialogTitle>💬 Chat della Lista</DialogTitle>
+                        <DialogTitle className="text-lg">💬 Chat della Lista</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <div className="max-h-60 overflow-y-auto space-y-2">
+                        <div className="max-h-48 sm:max-h-60 overflow-y-auto space-y-2">
                           {list.chat_messages?.map((msg) => (
                             <div 
                               key={msg.id} 
-                              className={`p-2 rounded-lg ${msg.user_email === user?.email ? 'bg-blue-100 ml-4' : 'bg-gray-100 mr-4'}`}
+                              className={`p-2 rounded-lg text-sm ${msg.user_email === user?.email ? 'bg-blue-100 ml-4' : 'bg-gray-100 mr-4'}`}
                             >
                               <div className="text-xs text-muted-foreground mb-1">
                                 {msg.user_name} - {new Date(msg.created_at).toLocaleTimeString()}
@@ -312,11 +313,12 @@ const SharedListDetail = () => {
                           <Input
                             value={chatMessage}
                             onChange={(e) => setChatMessage(e.target.value)}
-                            placeholder="Scrivi un messaggio..."
+                            placeholder="Scrivi..."
                             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                            className="text-sm"
                           />
                           <Button onClick={handleSendMessage} size="sm">
-                            <Send className="h-4 w-4" />
+                            <Send className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -325,25 +327,28 @@ const SharedListDetail = () => {
                   
                   <Button 
                     onClick={() => {
-                      const shareMessage = `Ti invito a collaborare sulla lista "${list.name}"! Scarica l'app e unisciti: ${window.location.origin}/shared/${listId}`;
+                      const shareMessage = `🎯 Ti invito sulla lista "${list.name}"! Unisciti: ${window.location.origin}/shared/${listId}`;
                       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
                       window.open(whatsappUrl, '_blank');
                     }}
                     variant="outline"
                     size="sm"
-                    className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                    className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100 w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <Users className="h-4 w-4 mr-2" />
-                    Invita su WhatsApp
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Invita WhatsApp</span>
+                    <span className="sm:hidden">📲 Invita</span>
                   </Button>
                   
                   <Button 
                     variant="destructive" 
                     size="sm"
                     onClick={handleDeleteList}
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Elimina Lista
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Elimina</span>
+                    <span className="sm:hidden">🗑️</span>
                   </Button>
                 </div>
               </div>
@@ -351,54 +356,57 @@ const SharedListDetail = () => {
           </Card>
         </div>
 
-        {/* Items */}
-        <div className="space-y-4 mb-8">
+        {/* Items - Mobile Responsive */}
+        <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
           {list.items?.map((item) => (
-            <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-blue-500 ${item.completed ? 'opacity-60' : ''}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-4">
+            <Card key={item.id} className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-l-4 border-blue-500 ${item.completed ? 'opacity-60' : ''} hover:shadow-md transition-shadow duration-200`}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start space-x-3">
                   <Checkbox
                     checked={item.completed}
                     onCheckedChange={() => handleToggleComplete(item)}
-                    className="w-5 h-5 mt-1"
+                    className="w-4 h-4 sm:w-5 sm:h-5 mt-1 shrink-0"
                   />
                   
-                  <div className="flex-1">
-                    <h3 className={`font-semibold ${item.completed ? 'line-through opacity-60' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-semibold text-sm sm:text-base ${item.completed ? 'line-through opacity-60' : ''} truncate`}>
                       {item.name}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="text-sm text-muted-foreground">{item.quantity}</span>
-                      <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                      <span className="text-xs sm:text-sm text-muted-foreground">{item.quantity}</span>
+                      <Badge variant="secondary" className="text-xs h-5">{item.category}</Badge>
                       {item.priority === 'alta' && (
-                        <Badge className={getPriorityColor(item.priority) + " text-xs"}>Priorità Alta</Badge>
+                        <Badge className={getPriorityColor(item.priority) + " text-xs h-5"}>🔥 Alta</Badge>
                       )}
-                      <span className="text-sm font-medium text-green-600">€{item.cost?.toFixed(2) || '0.00'}</span>
+                      <span className="text-xs sm:text-sm font-medium text-green-600">€{item.cost?.toFixed(2) || '0.00'}</span>
                     </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      Ultima modifica: {item.last_modified_by} - {new Date(item.last_modified_at).toLocaleString()}
-                    </div>
+                    {item.last_modified_by && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span className="truncate">{item.last_modified_by}</span>
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-1 sm:gap-2 shrink-0">
                     <Button 
                       variant="ghost" 
                       size="sm" 
+                      className="p-1 sm:p-2"
                       onClick={() => {
                         setEditingItem(item);
                         setShowEditDialog(true);
                       }}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 p-1 sm:p-2"
                       onClick={() => handleDeleteItem(item.id, item.name)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </div>
@@ -407,52 +415,55 @@ const SharedListDetail = () => {
           ))}
         </div>
 
-        {/* Add Item Button */}
+        {/* Add Item Button - Mobile Responsive */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg">
-              <Plus className="h-5 w-5 mr-2" />
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 rounded-xl shadow-lg text-sm sm:text-base">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Aggiungi Prodotto
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-md mx-auto">
             <DialogHeader>
-              <DialogTitle>Aggiungi Nuovo Prodotto</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">Aggiungi Nuovo Prodotto</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Nome Prodotto</Label>
+                <Label className="text-sm">Nome Prodotto</Label>
                 <Input
                   value={newItem.name}
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
                   placeholder="Es. Latte intero"
+                  className="mt-1"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Quantità</Label>
+                  <Label className="text-sm">Quantità</Label>
                   <Input
                     value={newItem.quantity}
                     onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
                     placeholder="1"
+                    className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label>Prezzo (€)</Label>
+                  <Label className="text-sm">Prezzo (€)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={newItem.cost}
                     onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
                     placeholder="0.00"
+                    className="mt-1"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Categoria</Label>
+                  <Label className="text-sm">Categoria</Label>
                   <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
