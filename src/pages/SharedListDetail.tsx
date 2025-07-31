@@ -76,6 +76,16 @@ const SharedListDetail = () => {
       return;
     }
 
+    // Blocca modifiche per liste demo
+    if (listId.startsWith('default-')) {
+      toast({
+        title: "🔒 Lista Demo",
+        description: "Le liste demo non possono essere modificate. Crea una nuova lista per iniziare!",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await firebaseApi.addItemToSharedList(listId, {
         name: newItem.name,
@@ -106,6 +116,16 @@ const SharedListDetail = () => {
   const handleUpdateItem = async () => {
     if (!listId || !editingItem) return;
 
+    // Blocca modifiche per liste demo
+    if (listId.startsWith('default-')) {
+      toast({
+        title: "🔒 Lista Demo",
+        description: "Le liste demo non possono essere modificate. Crea una nuova lista per iniziare!",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await firebaseApi.updateSharedListItem(listId, editingItem.id, {
         name: editingItem.name,
@@ -135,6 +155,16 @@ const SharedListDetail = () => {
   const handleToggleComplete = async (item: SharedListItem) => {
     if (!listId) return;
 
+    // Blocca modifiche per liste demo
+    if (listId.startsWith('default-')) {
+      toast({
+        title: "🔒 Lista Demo",
+        description: "Le liste demo non possono essere modificate. Crea una nuova lista per iniziare!",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await firebaseApi.updateSharedListItem(listId, item.id, { completed: !item.completed });
       await loadSharedList();
@@ -149,6 +179,16 @@ const SharedListDetail = () => {
 
   const handleDeleteItem = async (itemId: string, itemName: string) => {
     if (!listId) return;
+
+    // Blocca modifiche per liste demo
+    if (listId.startsWith('default-')) {
+      toast({
+        title: "🔒 Lista Demo",
+        description: "Le liste demo non possono essere modificate. Crea una nuova lista per iniziare!",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       await firebaseApi.deleteSharedListItem(listId, itemId);
@@ -187,6 +227,16 @@ const SharedListDetail = () => {
 
   const handleSendMessage = async () => {
     if (!listId || !chatMessage.trim()) return;
+
+    // Blocca chat per liste demo
+    if (listId.startsWith('default-')) {
+      toast({
+        title: "🔒 Lista Demo",
+        description: "Le liste demo non supportano la chat. Crea una nuova lista per iniziare!",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       await firebaseApi.addChatMessage(listId, chatMessage);
@@ -388,27 +438,35 @@ const SharedListDetail = () => {
                     )}
                   </div>
                   
-                  <div className="flex gap-1 sm:gap-2 shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="p-1 sm:p-2"
-                      onClick={() => {
-                        setEditingItem(item);
-                        setShowEditDialog(true);
-                      }}
-                    >
-                      <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-500 hover:text-red-700 p-1 sm:p-2"
-                      onClick={() => handleDeleteItem(item.id, item.name)}
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
+                  {!listId?.startsWith('default-') && (
+                    <div className="flex gap-1 sm:gap-2 shrink-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="p-1 sm:p-2"
+                        onClick={() => {
+                          setEditingItem(item);
+                          setShowEditDialog(true);
+                        }}
+                      >
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-500 hover:text-red-700 p-1 sm:p-2"
+                        onClick={() => handleDeleteItem(item.id, item.name)}
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {listId?.startsWith('default-') && (
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      Demo
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -416,83 +474,103 @@ const SharedListDetail = () => {
         </div>
 
         {/* Add Item Button - Mobile Responsive */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 rounded-xl shadow-lg text-sm sm:text-base">
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Aggiungi Prodotto
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-md mx-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Aggiungi Nuovo Prodotto</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm">Nome Prodotto</Label>
-                <Input
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                  placeholder="Es. Latte intero"
-                  className="mt-1"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm">Quantità</Label>
-                  <Input
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
-                    placeholder="1"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm">Prezzo (€)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newItem.cost}
-                    onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
-                    placeholder="0.00"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm">Categoria</Label>
-                  <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...CATEGORIES.food, ...CATEGORIES.home].map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Priorità</Label>
-                  <Select value={newItem.priority} onValueChange={(value: any) => setNewItem({...newItem, priority: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bassa">Bassa</SelectItem>
-                      <SelectItem value="media">Media</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button onClick={handleAddItem} className="w-full">
+        {!listId?.startsWith('default-') ? (
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 rounded-xl shadow-lg text-sm sm:text-base">
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Aggiungi Prodotto
               </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-md mx-auto">
+              <DialogHeader>
+                <DialogTitle className="text-lg sm:text-xl">Aggiungi Nuovo Prodotto</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm">Nome Prodotto</Label>
+                  <Input
+                    value={newItem.name}
+                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                    placeholder="Es. Latte intero"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm">Quantità</Label>
+                    <Input
+                      value={newItem.quantity}
+                      onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                      placeholder="1"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Prezzo (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newItem.cost}
+                      onChange={(e) => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm">Categoria</Label>
+                    <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...CATEGORIES.food, ...CATEGORIES.home].map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Priorità</Label>
+                    <Select value={newItem.priority} onValueChange={(value: any) => setNewItem({...newItem, priority: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bassa">Bassa</SelectItem>
+                        <SelectItem value="media">Media</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button onClick={handleAddItem} className="w-full">
+                  Aggiungi Prodotto
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <Card className="bg-amber-50 border-amber-200 p-4">
+            <div className="text-center space-y-2">
+              <h3 className="font-semibold text-amber-800">🔒 Lista Demo</h3>
+              <p className="text-sm text-amber-700">
+                Questa è una lista dimostrativa. 
+                <br />
+                Crea una nuova lista per iniziare a collaborare!
+              </p>
+              <Button 
+                onClick={() => navigate('/shared')}
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+              >
+                Crea Nuova Lista
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </Card>
+        )}
 
         {/* Edit Dialog */}
         {editingItem && (

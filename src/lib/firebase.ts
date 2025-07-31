@@ -1293,6 +1293,169 @@ export const addChatMessage = async (listId: string, message: string) => {
 };
 
 export const getSharedListById = async (listId: string): Promise<SharedList | null> => {
+  // Gestisci liste di default/demo
+  if (listId.startsWith('default-')) {
+    const defaultLists = [
+      {
+        id: 'default-1',
+        owner_id: 'default',
+        name: 'Lista Natale 2024',
+        type: 'shopping' as const,
+        members: ['famiglia@esempio.com', 'amici@esempio.com'],
+        items: [
+          { 
+            id: '1', 
+            name: 'Panettone', 
+            completed: false, 
+            quantity: '1', 
+            category: 'Dolci', 
+            priority: 'media' as const, 
+            cost: 15,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-12-01T09:00:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-12-01T09:00:00Z'
+          },
+          { 
+            id: '2', 
+            name: 'Champagne', 
+            completed: false, 
+            quantity: '1', 
+            category: 'Bevande', 
+            priority: 'alta' as const, 
+            cost: 25,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-12-01T09:30:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-12-01T09:30:00Z'
+          },
+          { 
+            id: '3', 
+            name: 'Decorazioni', 
+            completed: true, 
+            quantity: '1', 
+            category: 'Casa', 
+            priority: 'bassa' as const, 
+            cost: 20,
+            created_by: 'amici@esempio.com',
+            created_at: '2024-12-01T10:00:00Z',
+            last_modified_by: 'amici@esempio.com',
+            last_modified_at: '2024-12-01T12:00:00Z'
+          },
+          { 
+            id: '4', 
+            name: 'Regali bambini', 
+            completed: false, 
+            quantity: '3', 
+            category: 'Regali', 
+            priority: 'alta' as const, 
+            cost: 90,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-12-01T11:00:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-12-01T11:00:00Z'
+          }
+        ],
+        total_cost: 150.50,
+        created_at: '2024-12-01',
+        chat_messages: [
+          { 
+            id: '1', 
+            list_id: 'default-1',
+            user_email: 'famiglia@esempio.com', 
+            user_name: 'Famiglia',
+            message: 'Ho preso il panettone!', 
+            created_at: '2024-12-01T10:30:00Z' 
+          },
+          { 
+            id: '2', 
+            list_id: 'default-1',
+            user_email: 'amici@esempio.com', 
+            user_name: 'Amici',
+            message: 'Perfetto, io mi occupo dello champagne', 
+            created_at: '2024-12-01T11:00:00Z' 
+          }
+        ]
+      },
+      {
+        id: 'default-2',
+        owner_id: 'default',
+        name: 'Ferragosto al Mare',
+        type: 'shopping' as const,
+        members: ['famiglia@esempio.com'],
+        items: [
+          { 
+            id: '1', 
+            name: 'Crema solare', 
+            completed: true, 
+            quantity: '2', 
+            category: 'Cura personale', 
+            priority: 'alta' as const, 
+            cost: 15,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-08-10T08:00:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-08-10T08:00:00Z'
+          },
+          { 
+            id: '2', 
+            name: 'Bevande fresche', 
+            completed: false, 
+            quantity: '6', 
+            category: 'Bevande', 
+            priority: 'media' as const, 
+            cost: 12,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-08-10T08:30:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-08-10T08:30:00Z'
+          },
+          { 
+            id: '3', 
+            name: 'Frutta fresca', 
+            completed: false, 
+            quantity: '1kg', 
+            category: 'Frutta', 
+            priority: 'media' as const, 
+            cost: 8,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-08-10T09:00:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-08-10T09:00:00Z'
+          },
+          { 
+            id: '4', 
+            name: 'Ghiaccio', 
+            completed: false, 
+            quantity: '2kg', 
+            category: 'Altro', 
+            priority: 'bassa' as const, 
+            cost: 4,
+            created_by: 'famiglia@esempio.com',
+            created_at: '2024-08-10T09:30:00Z',
+            last_modified_by: 'famiglia@esempio.com',
+            last_modified_at: '2024-08-10T09:30:00Z'
+          }
+        ],
+        total_cost: 39.00,
+        created_at: '2024-08-10',
+        chat_messages: [
+          { 
+            id: '1', 
+            list_id: 'default-2',
+            user_email: 'famiglia@esempio.com', 
+            user_name: 'Famiglia',
+            message: 'Tutto pronto per il mare!', 
+            created_at: '2024-08-10T09:00:00Z' 
+          }
+        ]
+      }
+    ];
+
+    return defaultLists.find(list => list.id === listId) || null;
+  }
+
+  // Gestisci liste dal database
   if (!db) {
     throw new Error('Database non disponibile');
   }
