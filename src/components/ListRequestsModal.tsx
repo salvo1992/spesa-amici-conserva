@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 interface ListRequestsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onRequestUpdate: () => void;
 }
 
 interface ListRequest {
@@ -24,7 +25,7 @@ interface ListRequest {
   created_at: string;
 }
 
-const ListRequestsModal: React.FC<ListRequestsModalProps> = ({ isOpen, onClose }) => {
+const ListRequestsModal: React.FC<ListRequestsModalProps> = ({ isOpen, onClose, onRequestUpdate }) => {
   const queryClient = useQueryClient();
 
   const { data: requests = [], isLoading } = useQuery({
@@ -39,6 +40,7 @@ const ListRequestsModal: React.FC<ListRequestsModalProps> = ({ isOpen, onClose }
     onSuccess: (_, { accept }) => {
       queryClient.invalidateQueries({ queryKey: ['list-requests'] });
       queryClient.invalidateQueries({ queryKey: ['shared-lists'] });
+      onRequestUpdate();
       toast({
         title: accept ? "Richiesta accettata" : "Richiesta rifiutata",
         description: accept 
