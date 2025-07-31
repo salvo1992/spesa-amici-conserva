@@ -622,7 +622,21 @@ export const firebaseApi = {
 
   // Shared Lists
   getSharedLists: async (): Promise<SharedList[]> => {
-    if (!db || !auth?.currentUser) return [];
+    if (!db || !auth?.currentUser) {
+      // Fallback locale se Firebase non è configurato
+      const userString = localStorage.getItem('user');
+      if (!userString) return [];
+      
+      const user = JSON.parse(userString);
+      const savedLists = JSON.parse(localStorage.getItem('shared_lists') || '[]');
+      
+      // Filtra liste dell'utente corrente
+      return savedLists.filter((list: SharedList) => 
+        list.owner_id === user.uid || 
+        list.owner_id === user.email ||
+        list.members?.includes(user.email)
+      );
+    }
     try {
       console.log('Recupero liste condivise per utente:', auth.currentUser.email);
       const q = query(
@@ -667,7 +681,32 @@ export const firebaseApi = {
 
   createSharedList: async (listData: Omit<SharedList, 'id' | 'created_at'>) => {
     if (!db || !auth?.currentUser) {
-      throw new Error('Non autenticato');
+      // Fallback locale se Firebase non è configurato
+      const userString = localStorage.getItem('user');
+      if (!userString) {
+        throw new Error('Non autenticato');
+      }
+      
+      const user = JSON.parse(userString);
+      const listId = 'local_' + Date.now();
+      
+      const newList = {
+        id: listId,
+        ...listData,
+        owner_id: user.uid || user.email,
+        created_at: new Date().toISOString(),
+        last_modified_by: user.email || user.uid,
+        members: [user.email], // Solo il creatore inizialmente
+        last_modified_at: new Date().toISOString(),
+        chat_messages: []
+      };
+
+      // Salva in localStorage
+      const existingLists = JSON.parse(localStorage.getItem('shared_lists') || '[]');
+      existingLists.push(newList);
+      localStorage.setItem('shared_lists', JSON.stringify(existingLists));
+      
+      return newList;
     }
 
     const newList = {
