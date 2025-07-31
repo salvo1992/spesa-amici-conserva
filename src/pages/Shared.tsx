@@ -21,6 +21,7 @@ const Shared = () => {
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [selectedList, setSelectedList] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(null);
   const navigate = useNavigate();
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -327,22 +328,19 @@ const Shared = () => {
             
             <div className="flex flex-col sm:flex-row gap-3">
               <Dialog open={showAddDialog} onOpenChange={(open) => {
-                if (!open && !isCreating) {
-                  setShowAddDialog(false);
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="lg"
-                    disabled={isCreating}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 sm:px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                    <span className="hidden sm:inline">Nuova Lista</span>
-                    <span className="sm:hidden">Lista</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-md bg-white/95 backdrop-blur-sm rounded-2xl mx-auto">
+  if (!open && !isCreating) setShowAddDialog(open);
+}}>
+  <Button
+    size="lg"
+    disabled={isCreating}
+    onClick={() => setShowAddDialog(true)}
+    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 sm:px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+    <span className="hidden sm:inline">Nuova Lista</span>
+    <span className="sm:hidden">Lista</span>
+  </Button>
+  <DialogContent className="w-[95vw] max-w-md bg-white/95 backdrop-blur-sm rounded-2xl mx-auto">
                   <DialogHeader>
                     <DialogTitle className="text-lg sm:text-xl font-bold text-center">
                       🎯 Crea Lista Condivisa
@@ -495,10 +493,15 @@ const Shared = () => {
               <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="flex items-center space-x-1 text-muted-foreground">
-                      <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="text-xs sm:text-sm">{list.members?.length || 0}</span>
-                    </div>
+                    <div
+  className="flex items-center space-x-1 text-muted-foreground cursor-pointer underline"
+  onClick={() => setShowMembersModal(list)}
+  title="Vedi membri"
+>
+  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+  <span className="text-xs sm:text-sm">{list.members?.length || 0}</span>
+</div>
+
                     <div className="flex items-center space-x-1 text-muted-foreground">
                       <Package className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs sm:text-sm">{list.items?.length || 0}</span>
@@ -610,6 +613,18 @@ const Shared = () => {
           }}
         />
       </div>
+      <Dialog open={!!showMembersModal} onOpenChange={() => setShowMembersModal(null)}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Membri della lista</DialogTitle>
+    </DialogHeader>
+    <ul className="space-y-1">
+      {showMembersModal?.members?.map((member, idx) => (
+        <li key={idx} className="text-sm">{member}</li>
+      ))}
+    </ul>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
